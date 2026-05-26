@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>AI Chatbot</title>
+
+<style>
+body {
+  font-family: Arial;
+  background: #0f172a;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 100vh;
+  margin: 0;
+}
+
+/* avatar */
+.avatar-option {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 2px solid transparent;
+}
+
+.avatar-option:hover {
+  border: 2px solid #3b82f6;
+}
+
+/* chat */
+.chat-container {
+  width: 420px;
+  height: 650px;
+  background: #1e293b;
+  border-radius: 15px;
+  display: flex;
+  flex-direction: column;
+  margin-top: 10px;
+}
+
+.input-area {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  border-top: 1px solid #475569;
+}
+
+.input-area input {
+  flex: 1;
+}
+
+.chat-box {
+  flex: 1;
+  padding: 15px;
+  overflow-y: auto;
+}
+
+.message {
+  display: flex;
+  align-items: flex-end;
+  margin: 10px 0;
+}
+
+.bubble {
+  padding: 10px;
+  border-radius: 10px;
+  max-width: 70%;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  word-break: break-word;
+  white-space: pre-wrap;
+}
+
+.user .bubble {
+  background: #3b82f6;
+  color: white;
+  margin-left: auto;
+}
+
+.bot .bubble {
+  background: #334155;
+  color: white;
+}
+
+.avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  margin: 0 5px;
+}
+
+input {
+  flex: 1;
+  padding: 12px;
+  border: none;
+  background: #1e293b;
+  color: white;
+}
+
+button {
+  padding: 12px;
+  border: none;
+  background: #3b82f6;
+  color: white;
+  cursor: pointer;
+}
+
+.light-mode {
+  background: #f1f5f9;
+  color: black;
+}
+
+.light-mode .chat-container {
+  background: white;
+  border: 6px solid #b8c4d9;
+  border-radius: 28px;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.10);
+}
+
+.light-mode .chat-box {
+  background: #f8fafc;
+}
+
+.light-mode .input-area {
+  background: white;
+  border-top: 1px solid #cbd5e1;
+}
+
+.light-mode input {
+  background: white;
+  color: black;
+}
+
+.light-mode input {
+  background: white;
+  color: black;
+}
+
+.light-mode input::placeholder {
+  color: #64748b;
+}
+
+.light-mode .bot .bubble {
+  background: #cbd5e1;
+  color: black;
+}
+
+.light-mode #dashboardPanel,
+.light-mode #settingsPanel {
+  background: white;
+  color: black;
+  border: 1px solid #cbd5e1;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+
+.light-mode textarea {
+  background: #f8fafc !important;
+  color: black !important;
+}
+</style>
+</head>
+
+<body>
+
+<!-- TOP RIGHT DASHBOARD BUTTON -->
+<!-- TOP RIGHT BUTTONS -->
+<div style="position:absolute; top:15px; right:20px; z-index:999; display:flex; gap:5px;">
+
+  <button onclick="toggleDashboard()" style="
+    padding:10px 16px;
+    border:none;
+    border-radius:8px;
+    background:#3b82f6;
+    color:white;
+    cursor:pointer;
+    font-weight:bold;">
+    Dashboard
+  </button>
+
+  <button onclick="toggleSettings()" style="
+    padding:10px 14px;
+    border:none;
+    border-radius:8px;
+    background:#334155;
+    color:white;
+    cursor:pointer;
+    font-weight:bold;">
+    ⚙️
+  </button>
+
+</div>
+
+<!-- SETTINGS PANEL -->
+<div id="settingsPanel" style="
+display:none;
+position:fixed;
+top:70px;
+right:20px;
+width:300px;
+background:#1e293b;
+border:1px solid #334155;
+border-radius:12px;
+padding:15px;
+color:white;
+z-index:999;">
+
+<h3 style="margin-top:0;">Settings</h3>
+
+<p>Theme Mode</p>
+
+<hr style="margin:15px 0; border:0.5px solid #475569;">
+
+<p>Voice Selection</p>
+
+<button onclick="setVoice('male')" style="
+width:100%;
+margin-bottom:10px;
+border-radius:8px;">
+👨 Male Voice
+</button>
+
+<button onclick="setVoice('female')" style="
+width:100%;
+border-radius:8px;">
+👩 Female Voice
+</button>
+
+<button onclick="setDarkMode()" style="
+width:100%;
+margin-bottom:10px;
+border-radius:8px;">
+🌙 Dark Mode
+</button>
+
+<button onclick="setLightMode()" style="
+width:100%;
+border-radius:8px;">
+☀️ Light Mode
+</button>
+
+</div>
+
+<!-- AVATAR -->
+<div style="text-align:center; margin-top:15px; color:white;">
+  <p>Choose your avatar</p>
+
+  <div style="display:flex; gap:10px;">
+    <img src="https://i.pravatar.cc/40?img=1" class="avatar-option">
+    <img src="https://i.pravatar.cc/40?img=2" class="avatar-option">
+    <img src="https://i.pravatar.cc/40?img=3" class="avatar-option">
+    <div id="addAvatar" class="avatar-option">+</div>
+  </div>
+
+  <input type="file" id="avatarInput" style="display:none;">
+</div>
+
+<!-- CHAT -->
+<div class="chat-container">
+  <div class="chat-box" id="chatBox"></div>
+
+  <div class="input-area">
+    <button onclick="document.getElementById('fileInput').click()">➕</button>
+    <input type="file" id="fileInput" style="display:none;" />
+    <input id="message" placeholder="Type a message..." />
+    <button onclick="startMic()">🎤</button>
+	<button type="button" id="voiceBtn">🔇</button>
+    <button type="button" onclick="sendMessage()">Send</button>
+  </div>
+</div>
+
+<!-- OWNER DASHBOARD PANEL -->
+<div id="dashboardPanel" style="
+display:none;
+position:fixed;
+top:70px;
+right:20px;
+width:420px;
+background:#1e293b;
+border:1px solid #334155;
+border-radius:12px;
+padding:15px;
+color:white;
+z-index:999;">
+
+<h3 style="margin-top:0;">Owner Dashboard</h3>
+
+<p style="font-size:14px;">Paste Company Profile</p>
+
+<textarea id="companyProfile"
+placeholder="Paste your business details here..."
+style="
+width:100%;
+height:220px;
+padding:10px;
+background:#0f172a;
+color:white;
+border:1px solid #475569;
+border-radius:8px;
+resize:none;"></textarea>
+
+<button onclick="saveProfile()" style="
+margin-top:10px;
+width:100%;
+padding:12px;
+border:none;
+border-radius:8px;
+background:#3b82f6;
+color:white;
+font-weight:bold;
+cursor:pointer;">
+Save Profile
+</button>
+
+</div>
+
+<script>
+
+function setDarkMode() {
+  document.body.classList.remove("light-mode");
+  localStorage.setItem("theme", "dark");
+}
+
+function setLightMode() {
+  document.body.classList.add("light-mode");
+  localStorage.setItem("theme", "light");
+}
+
+function setVoice(type) {
+  localStorage.setItem("voiceType", type);
+
+  if (type === "male") {
+    alert("👨 Male voice selected");
+  } else {
+    alert("👩 Female voice selected");
+  }
+}
+
+function toggleSettings() {
+  const panel = document.getElementById("settingsPanel");
+
+  if (panel.style.display === "none" || panel.style.display === "") {
+    panel.style.display = "block";
+  } else {
+    panel.style.display = "none";
+  }
+}
+
+function toggleDashboard() {
+  const panel = document.getElementById("dashboardPanel");
+
+  if (panel.style.display === "none" || panel.style.display === "") {
+    panel.style.display = "block";
+  } else {
+    panel.style.display = "none";
+  }
+}
+
+function saveProfile() {
+  const text = document.getElementById("companyProfile").value;
+  localStorage.setItem("companyProfile", text);
+  alert("Company profile saved!");
+}
+
+window.onload = function() {
+
+  const theme = localStorage.getItem("theme");
+
+  if (theme === "light") {
+    document.body.classList.add("light-mode");
+  }
+  
+  const saved = localStorage.getItem("companyProfile");
+
+  if (saved) {
+    document.getElementById("companyProfile").value = saved;
+  }
+};
+
+let userAvatar = "https://i.pravatar.cc/40?img=1";
+let selectedFile = null;
+
+function startMic() {
+  if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
+    alert("Mic not supported sa browser mo");
+    return;
+  }
+
+  const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+
+  recognition.lang = "en-US";
+  recognition.start();
+
+  recognition.onresult = function(event) {
+    const text = event.results[0][0].transcript;
+    document.getElementById("message").value = text;
+    sendMessage();
+  };
+
+  recognition.onerror = function(event) {
+    alert("Mic error: " + event.error);
+  };
+}
+
+document.getElementById("fileInput").addEventListener("change", function(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  selectedFile = file;
+  addMessage("📎 " + file.name, "user");
+});
+
+document.querySelectorAll(".avatar-option").forEach(img => {
+  img.addEventListener("click", function() {
+    if (this.id === "addAvatar") {
+      document.getElementById("avatarInput").click();
+    } else {
+      userAvatar = this.src;
+    }
+  });
+});
+
+document.getElementById("avatarInput").addEventListener("change", function(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = function(event) {
+    userAvatar = event.target.result;
+  };
+
+  reader.readAsDataURL(file);
+});
+
+const input = document.getElementById("message");
+
+input.addEventListener("keydown", function(e) {
+  if (e.key === "Enter") {
+    sendMessage();
+  }
+});
+
+async function sendMessage() {
+  const text = input.value;
+  if (!text) return;
+
+  addMessage(text, "user");
+  input.value = "";
+
+  const chatBox = document.getElementById("chatBox");
+
+  const loadingDiv = document.createElement("div");
+  loadingDiv.classList.add("message", "bot");
+
+  loadingDiv.innerHTML = `
+    <img class="avatar" src="https://cdn-icons-png.flaticon.com/512/4712/4712109.png">
+    <div class="bubble">Typing...</div>
+  `;
+
+  chatBox.appendChild(loadingDiv);
+
+  try {
+    const res = await fetch("http://127.0.0.1:8000/chat", {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+     body: JSON.stringify({
+       text: text,
+       companyProfile: localStorage.getItem("companyProfile") || "",
+       voiceType: localStorage.getItem("voiceType") || "female"
+     })
+    });
+
+    const data = await res.json();
+	
+	if (data.audio) {
+
+      const audioUrl = "http://127.0.0.1:8000" + data.audio;
+
+      console.log("Playing:", audioUrl);
+
+      const audio = new Audio(audioUrl);
+
+      audio.play()
+        .then(() => {
+          console.log("Audio playing");
+        })
+        .catch(err => {
+          console.log("Audio blocked:", err);
+        });
+    }
+	
+	chatBox.removeChild(loadingDiv);
+
+    let reply = data.reply || data.response || data.message;
+
+    if (reply && reply.includes("429")) {
+      reply = "⚠️ Too many requests right now. Please try again shortly.";
+    }
+
+    if (reply) {
+      addMessage(reply, "bot");
+    }
+
+  } catch (error) {
+    chatBox.removeChild(loadingDiv);
+    addMessage("❌ Error connecting to AI", "bot");
+  }
+}
+
+function addMessage(text, sender) {
+  const chatBox = document.getElementById("chatBox");
+
+  const msg = document.createElement("div");
+  msg.classList.add("message", sender);
+
+  const avatar = document.createElement("img");
+  avatar.classList.add("avatar");
+
+  avatar.src = sender === "user"
+    ? userAvatar
+    : "https://cdn-icons-png.flaticon.com/512/4712/4712109.png";
+
+  const bubble = document.createElement("div");
+  bubble.classList.add("bubble");
+  bubble.innerText = text;
+
+  if (sender === "bot") msg.appendChild(avatar);
+  msg.appendChild(bubble);
+  if (sender === "user") msg.appendChild(avatar);
+
+  chatBox.appendChild(msg);
+  chatBox.scrollTop = chatBox.scrollHeight;
+  }
+
+let voiceOn = false;
+
+function toggleVoice() {
+  voiceOn = !voiceOn;
+
+  const btn = document.getElementById("voiceBtn");
+
+  if (voiceOn) {
+    btn.textContent = "🔊";
+    sendCommand("voice on");
+  } else {
+    btn.textContent = "🔇";
+    sendCommand("voice off");
+  }
+}
+
+async function sendCommand(command) {
+  try {
+    await fetch("http://127.0.0.1:8000/chat", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        text: command,
+        companyProfile: localStorage.getItem("companyProfile") || "",
+        voiceType: localStorage.getItem("voiceType") || "female"
+      })
+    });
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+document.getElementById("voiceBtn")
+  .addEventListener("click", toggleVoice);
+
+</script>
+
+</body>
+</html>
+
