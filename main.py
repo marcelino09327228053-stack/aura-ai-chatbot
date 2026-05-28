@@ -10,6 +10,26 @@ load_dotenv()
 
 client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
+app = FastAPI()
+
+from fastapi.responses import FileResponse
+
+@app.get("/")
+async def root():
+    return FileResponse("index.html")
+
+from fastapi.staticfiles import StaticFiles
+
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 tts_mode = False
 
 # 👇 ILAGAY MO DITO
