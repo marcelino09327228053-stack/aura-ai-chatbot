@@ -15,6 +15,12 @@ genai.configure(api_key=key)
 
 app = FastAPI()
 
+from fastapi.responses import FileResponse
+
+@app.get("/")
+async def root():
+    return FileResponse("index.html")
+
 from fastapi.staticfiles import StaticFiles
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
