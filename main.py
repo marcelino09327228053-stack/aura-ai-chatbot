@@ -33,7 +33,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-model = genai.GenerativeModel("gemini-1.5-flash")
+model = genai.GenerativeModel("gemini-pro")
 
 tts_mode = False
 
