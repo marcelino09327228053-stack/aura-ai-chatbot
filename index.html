@@ -460,7 +460,7 @@ async function sendMessage() {
   chatBox.appendChild(loadingDiv);
 
   try {
-    const res = await fetch("http://127.0.0.1:8000/chat", {
+    const res = await fetch("/chat", {
       method: "POST",
       headers: {"Content-Type":"application/json"},
      body: JSON.stringify({
@@ -474,7 +474,7 @@ async function sendMessage() {
 	
 	if (data.audio) {
 
-      const audioUrl = "http://127.0.0.1:8000" + data.audio;
+      const audioUrl = data.audio;
 
       console.log("Playing:", audioUrl);
 
@@ -550,7 +550,7 @@ function toggleVoice() {
 
 async function sendCommand(command) {
   try {
-    await fetch("http://127.0.0.1:8000/chat", {
+    await fetch("/chat", {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
