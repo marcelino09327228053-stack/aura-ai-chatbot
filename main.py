@@ -38,59 +38,7 @@ model = genai.GenerativeModel("gemini-2.5-flash")
 tts_mode = False
 
 # 👇 ILAGAY MO DITO
-from google.cloud import texttospeech_v1 as texttospeech
-
-def text_to_speech(text, voice_type="female"):
-    import time
-
-    client = texttospeech.TextToSpeechClient()
-
-    input_text = texttospeech.SynthesisInput(text=text)
-
-    if voice_type == "male":
-        gender = texttospeech.SsmlVoiceGender.MALE
-    else:
-        gender = texttospeech.SsmlVoiceGender.FEMALE
-
-    voice = texttospeech.VoiceSelectionParams(
-        language_code="fil-PH",
-        ssml_gender=gender
-    )
-
-    audio_config = texttospeech.AudioConfig(
-        audio_encoding=texttospeech.AudioEncoding.MP3
-    )
-
-    response = client.synthesize_speech(
-        input=input_text,
-        voice=voice,
-        audio_config=audio_config
-    )
-
-    filename = f"static/output_{int(time.time())}.mp3"
-
-    with open(filename, "wb") as out:
-       out.write(response.audio_content)
-
-    import threading
-    import time
-    import os
-
-    def delete_file_later(path):
-        time.sleep(60)
-
-        if os.path.exists(path):
-            os.remove(path)
-            print("Deleted:", path)
-
-    threading.Thread(
-        target=delete_file_later,
-        args=(filename,),
-        daemon=True
-    ).start()
-
-    return f"/{filename}"
-    
+# from google.cloud import texttospeech_v1 as texttospeech
 
 # 👇 AFTER NITO
 class Message(BaseModel):
@@ -143,11 +91,6 @@ Customer Message:
             reply = "Sorry, no response generated."
 
         import re
-
-        if use_voice:
-            clean_reply = re.sub(r'\s+', ' ', reply).strip()
-            audio_file = text_to_speech(clean_reply, msg.voiceType)
-            return {"reply": reply, "audio": audio_file}
 
         return {"reply": reply}
 
