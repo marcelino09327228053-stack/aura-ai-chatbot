@@ -1,39 +1,14 @@
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi import FastAPI
 from pydantic import BaseModel
-import google.generativeai as genai
+from google import genai
 import os
 
 from dotenv import load_dotenv
 
 load_dotenv()
 
-key = os.getenv("GEMINI_API_KEY")
-print("KEY FOUND:", key)
-
-genai.configure(api_key=key)
-
-app = FastAPI()
-
-from fastapi.responses import FileResponse
-
-@app.get("/")
-async def root():
-    return FileResponse("index.html")
-
-from fastapi.staticfiles import StaticFiles
-
-app.mount("/static", StaticFiles(directory="static"), name="static")
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-model = genai.GenerativeModel("gemini-1.5-flash")
+client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
 tts_mode = False
 
@@ -83,9 +58,12 @@ Customer Message:
 {msg.text}
 """
 
-        response = model.generate_content(prompt)
+        response = client.models.generate_content(
+            model="gemini-2.0-flash",
+            contents=prompt
+        )
 
-        reply = getattr(response, "text", None)
+        reply = response.text
 
         if not reply:
             reply = "Sorry, no response generated."
