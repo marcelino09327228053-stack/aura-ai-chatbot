@@ -1,6 +1,5 @@
 fastapi
 uvicorn
 python-dotenv
-google-generativeai
-google-cloud-texttospeech
+google-generativeai==0.8.5
 python-multipart
