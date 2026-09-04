@@ -65,6 +65,9 @@ class ProviderHealthRegistry:
             return {"state": "healthy", "reason": None, "cooldown_remaining": 0.0}
         return {"state": value["state"], "reason": value["reason"], "cooldown_remaining": remaining}
 
+    def snapshot(self) -> dict:
+        return {provider: self.status(provider) for provider in ai_service.PROVIDERS}
+
 
 provider_health = ProviderHealthRegistry()
 
