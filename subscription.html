@@ -37,7 +37,7 @@ ul { padding-left:18px; color:var(--muted); }
 <body>
 <main class="wrap">
   <header class="header">
-    <div><h1>MB Future Tech AI Chatbot Billing & Usage</h1><div class="muted">Know what you paid, when it expires, and what you used.</div></div>
+    <div><h1>Subscription & AI Usage</h1><div class="muted">Choose Free or Subscription and monitor your monthly AI usage.</div></div>
     <div class="header-actions">
       <button type="button" class="secondary" onclick="goBackToPreviousPage()" aria-label="Go back">← Back</button>
       <a class="btn secondary" href="/test-center">System Test Center</a>
@@ -60,7 +60,7 @@ ul { padding-left:18px; color:var(--muted); }
     </article>
 
     <article class="card wide">
-      <h2>AI Chatbot plans</h2>
+      <h2>Choose your plan</h2>
       <div class="plans" id="planList"></div>
     </article>
 
@@ -75,8 +75,8 @@ ul { padding-left:18px; color:var(--muted); }
     </article>
 
     <article class="card wide">
-      <h2>AI provider consumption</h2>
-      <p class="muted">Requests and tokens are securely routed through the MB Future Tech AI Gateway. Provider credentials remain server-side.</p>
+      <h2>Your AI usage</h2>
+      <p class="muted">See the AI requests and usage deducted from your monthly allowance. You do not need your own provider API key.</p>
       <div style="overflow:auto">
         <table>
           <thead><tr><th>Provider</th><th>Requests</th><th>Input tokens</th><th>Output tokens</th><th>Estimated cost</th></tr></thead>
@@ -114,6 +114,7 @@ function authHeaders() {
 function moneyMinor(value){ return new Intl.NumberFormat("en-PH",{style:"currency",currency:"PHP"}).format(Number(value||0)/100); }
 function moneyUsd(value){ return new Intl.NumberFormat("en-US",{style:"currency",currency:"USD",maximumFractionDigits:6}).format(Number(value||0)); }
 function dateText(value){ return value ? new Date(value).toLocaleString() : "No expiration"; }
+function planLabel(plan){ return plan==="test" ? "Subscription" : "Free"; }
 
 async function loadSubscription(){
   const headers=authHeaders(); if(!headers)return;
@@ -122,7 +123,7 @@ async function loadSubscription(){
   const data=await subRes.json(), plans=await plansRes.json();
   currentSubscription=data.subscription;
   const sub=data.subscription || {plan:"free",status:"active",days_remaining:null};
-  document.getElementById("planName").textContent=sub.plan.toUpperCase()+" PLAN";
+  document.getElementById("planName").textContent=planLabel(sub.plan);
   document.getElementById("statusBadge").textContent=sub.status.toUpperCase();
   document.getElementById("expiryText").textContent=sub.expires_at
     ? `${sub.days_remaining} day(s) remaining • Expires ${dateText(sub.expires_at)}`
@@ -136,14 +137,14 @@ async function loadSubscription(){
     notice.className="notice "+(data.notification.level==="danger"?"danger":"");
     notice.innerHTML=`<strong>${data.notification.message}</strong> <button onclick="renewCurrent()" style="margin-left:12px">${data.notification.action}</button>`;
   }
-  document.getElementById("planList").innerHTML=plans.map(plan=>{
+  document.getElementById("planList").innerHTML=plans.filter(plan=>["free","test"].includes(plan.plan)).map(plan=>{
     const active=plan.plan===sub.plan?"active":"";
     const companies=plan.max_companies===null?"Unlimited":plan.max_companies;
     const allowance=plan.monthly_ai_allowance_minor||0;
     const price=moneyMinor(plan.price_minor||0)+" / month";
-    return `<div class="card ${active}"><h3>${plan.plan.toUpperCase()}</h3><div class="metric">${price}</div>
+    return `<div class="card ${active}"><h3>${planLabel(plan.plan)}</h3><div class="metric">${price}</div>
       <ul><li>${companies} companies</li><li>${moneyMinor(allowance)} monthly AI usage allowance</li><li>Server-managed AI access</li></ul>
-      ${active?`<button disabled>Current plan</button>`:(plan.plan==="test"?`<button onclick="mockActivate('${plan.plan}')">TEST: Simulate successful payment</button>`:`<button disabled>Unavailable</button>`)}</div>`;
+      ${active?`<button disabled>Current plan</button>`:(plan.plan==="test"?`<button onclick="mockActivate('${plan.plan}')">Choose Subscription</button>`:`<button disabled>Free plan</button>`)}</div>`;
   }).join("");
   const payments=data.payment_history||[];
   document.getElementById("paymentRows").innerHTML=payments.length?payments.map(p=>
