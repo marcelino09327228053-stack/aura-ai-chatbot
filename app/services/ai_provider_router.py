@@ -1,12 +1,15 @@
 """Authorized provider routing and temporary health state."""
 
 from dataclasses import dataclass
+import math
 import os
 import threading
 import time
+import json
 
 from app.core.config import AI_GATEWAY_PROVIDER_COOLDOWN_SECONDS, AI_GATEWAY_PROVIDER_ORDER, AI_MODEL_COSTS_USD
 from app.services import ai_service
+from app.infrastructure.redis.client import get_client
 
 
 @dataclass(frozen=True)
@@ -28,14 +31,32 @@ class ProviderHealthRegistry:
 
     def mark_healthy(self, provider: str):
         with self._lock: self._health[provider] = {"state": "healthy", "reason": None, "until": 0.0}
+        client = get_client()
+        if client:
+            try: client.delete(f"aura:ai:provider-health:{provider}")
+            except Exception: pass
 
     def mark_cooldown(self, provider: str, reason: str, seconds: float | None = None,
                       state: str = "cooldown"):
         duration = max(0.0, seconds if seconds is not None else AI_GATEWAY_PROVIDER_COOLDOWN_SECONDS)
         with self._lock:
             self._health[provider] = {"state": state, "reason": reason, "until": time.monotonic() + duration}
+        client = get_client()
+        if client:
+            try:
+                client.setex(f"aura:ai:provider-health:{provider}", max(1, math.ceil(duration)),
+                             json.dumps({"state": state, "reason": reason}))
+            except Exception: pass
 
     def status(self, provider: str) -> dict:
+        client = get_client()
+        if client:
+            try:
+                raw = client.get(f"aura:ai:provider-health:{provider}")
+                if raw:
+                    value = json.loads(raw)
+                    return {**value, "cooldown_remaining": float(client.ttl(f"aura:ai:provider-health:{provider}"))}
+            except Exception: pass
         with self._lock:
             value = dict(self._health.get(provider, {"state": "healthy", "reason": None, "until": 0.0}))
         remaining = max(0.0, value["until"] - time.monotonic())
