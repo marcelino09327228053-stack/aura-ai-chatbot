@@ -109,6 +109,18 @@ class MockPaymentEventRequest(BaseModel):
     status: str = "succeeded"
 
 
+class LoadTestRequest(BaseModel):
+    requests: int = 100
+    customers: int = 10
+    service_ms: float = 10
+    global_limit: int = 20
+    customer_limit: int = 2
+
+
+class LiveProviderTestRequest(BaseModel):
+    confirm_billable: bool = False
+
+
 class AIProviderConnectRequest(BaseModel):
     api_key: str
 

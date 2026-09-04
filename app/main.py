@@ -45,6 +45,7 @@ from app.api.profile_manager import router as profile_manager_router
 from app.api.subscriptions import router as subscriptions_router
 from app.api.ai_operations import router as ai_operations_router
 from app.api.payment_webhooks import router as payment_webhooks_router
+from app.api.test_center import router as test_center_router
 from app.api.widget import router as widget_router
 from app.api.knowledge import router as knowledge_router
 from app.api.facebook_messenger import router as facebook_messenger_router
@@ -120,6 +121,13 @@ def create_app() -> FastAPI:
     @application.get("/subscription")
     async def subscription_page():
         return FileResponse("subscription.html")
+
+    @application.get("/test-center")
+    async def test_center_page():
+        if get_aura_env() == "production":
+            from fastapi import HTTPException
+            raise HTTPException(status_code=404)
+        return FileResponse("test-center.html")
 
     @application.get("/account")
     async def account_page():
@@ -206,6 +214,7 @@ def create_app() -> FastAPI:
     application.include_router(subscriptions_router)
     application.include_router(ai_operations_router)
     application.include_router(payment_webhooks_router)
+    application.include_router(test_center_router)
     application.include_router(chat_router)
     application.include_router(ai_providers_router)
     application.include_router(conversations_router)
