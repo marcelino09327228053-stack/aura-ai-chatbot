@@ -2,6 +2,8 @@
 
 import json
 import os
+from email.utils import parsedate_to_datetime
+from datetime import datetime, timezone
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
@@ -87,6 +89,27 @@ class AIResult(str):
         return value
 
 
+class ProviderHTTPError(RuntimeError):
+    """Sanitized provider error retaining retry metadata, never credentials."""
+
+    def __init__(self, status_code: int, detail: str, retry_after: float | None = None):
+        super().__init__(f"AI provider request failed with HTTP {status_code}: {detail[:300]}")
+        self.status_code = status_code
+        self.retry_after = retry_after
+
+
+def _retry_after_seconds(value: str | None) -> float | None:
+    if not value:
+        return None
+    try:
+        return max(0.0, float(value))
+    except ValueError:
+        try:
+            return max(0.0, (parsedate_to_datetime(value) - datetime.now(timezone.utc)).total_seconds())
+        except (TypeError, ValueError):
+            return None
+
+
 def get_provider_status(company_id: int | None = None) -> list[dict]:
     """Return safe provider metadata without exposing API keys."""
     return [
@@ -153,7 +176,9 @@ def _post_json(url: str, payload: dict, headers: dict) -> dict:
             return json.loads(response.read().decode("utf-8"))
     except HTTPError as exc:
         detail = exc.read().decode("utf-8", errors="replace")
-        raise RuntimeError(f"API request failed ({exc.code}): {detail[:300]}") from exc
+        raise ProviderHTTPError(
+            exc.code, detail, _retry_after_seconds(exc.headers.get("Retry-After"))
+        ) from exc
     except URLError as exc:
         raise RuntimeError(f"Could not connect to AI provider: {exc.reason}") from exc
 

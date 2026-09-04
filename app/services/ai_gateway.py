@@ -1,20 +1,27 @@
-"""Central server-side AI Gateway with subscription and idempotency controls."""
+"""Central managed AI Gateway with queueing, routing, retries, and metering."""
 
 import asyncio
 import math
-import os
+import random
+import time
 import uuid
 
 from fastapi import HTTPException
 
 from app.core.config import (
     AI_GATEWAY_MAX_RETRIES,
-    AI_GATEWAY_PROVIDER_ORDER,
+    AI_GATEWAY_PROVIDER_COOLDOWN_SECONDS,
+    AI_GATEWAY_RETRY_BASE_SECONDS,
+    AI_GATEWAY_RETRY_JITTER_SECONDS,
+    AI_GATEWAY_RETRY_MAX_SECONDS,
     AI_GATEWAY_USD_TO_ALLOWANCE_RATE,
     AI_MODEL_COSTS_USD,
 )
-from app.database import ai_gateway_repository, ai_usage_repository, subscription_repository
+from app.database import ai_gateway_repository, ai_usage_repository
 from app.services import ai_service, subscription_service
+from app.services.ai_observability import emit
+from app.services.ai_provider_router import provider_health, route_candidates
+from app.services.ai_traffic import get_traffic_manager
 
 
 def _provider_cost(model: str, input_tokens: int, output_tokens: int) -> float | None:
@@ -26,142 +33,164 @@ def _provider_cost(model: str, input_tokens: int, output_tokens: int) -> float |
         output_rate = float(pricing.get("output_per_million", 0))
     except (TypeError, ValueError):
         return None
-    return round(
-        (input_tokens / 1_000_000 * input_rate)
-        + (output_tokens / 1_000_000 * output_rate),
-        8,
-    )
+    return round(input_tokens / 1_000_000 * input_rate + output_tokens / 1_000_000 * output_rate, 8)
 
 
 def _allowance_charge_minor(provider_cost_usd: float) -> int:
-    """Convert actual provider cost to allowance-currency minor units."""
     return max(0, math.ceil(provider_cost_usd * AI_GATEWAY_USD_TO_ALLOWANCE_RATE * 100))
 
 
-def _configured_provider_order() -> list[str]:
-    result = []
-    for provider in AI_GATEWAY_PROVIDER_ORDER:
-        config = ai_service.PROVIDERS.get(provider)
-        if config and os.getenv(config["key_env"], "").strip():
-            result.append(provider)
-    return result
+def _error_status(exc: Exception) -> int | None:
+    current = exc
+    for _ in range(4):
+        for name in ("status_code", "code"):
+            value = getattr(current, name, None)
+            try:
+                if value is not None: return int(value)
+            except (TypeError, ValueError):
+                pass
+        current = getattr(current, "__cause__", None)
+        if current is None: break
+    return None
 
 
-async def generate(
-    prompt: str,
-    company_id: int,
-    user_id: int | None,
-    request_id: str | None = None,
-) -> dict:
+def _retry_after(exc: Exception) -> float | None:
+    value = getattr(exc, "retry_after", None)
+    if value is not None:
+        try: return max(0.0, float(value))
+        except (TypeError, ValueError): pass
+    response = getattr(exc, "response", None)
+    headers = getattr(response, "headers", None) or getattr(exc, "headers", None)
+    if headers:
+        value = headers.get("Retry-After") or headers.get("retry-after")
+        try: return max(0.0, float(value))
+        except (TypeError, ValueError): pass
+    return None
+
+
+def _backoff(retry_index: int) -> float:
+    base = min(AI_GATEWAY_RETRY_MAX_SECONDS, AI_GATEWAY_RETRY_BASE_SECONDS * (2 ** retry_index))
+    return min(AI_GATEWAY_RETRY_MAX_SECONDS, base + random.uniform(0, AI_GATEWAY_RETRY_JITTER_SECONDS))
+
+
+async def _call_provider(prompt: str, provider: str, model: str):
+    return await asyncio.to_thread(ai_service.generate_reply, prompt, provider, model, None)
+
+
+async def generate(prompt: str, company_id: int, user_id: int | None,
+                   request_id: str | None = None, capability_tier: str = "balanced") -> dict:
+    request_started = time.monotonic()
     request_id = (request_id or str(uuid.uuid4())).strip()
     if not request_id or len(request_id) > 128:
         raise HTTPException(status_code=400, detail="Invalid AI request ID.")
-
     record, created = ai_gateway_repository.begin_request(request_id, company_id, user_id)
     if not created:
         if record["company_id"] != company_id or record.get("user_id") != user_id:
             raise HTTPException(status_code=409, detail="AI request ID is already in use.")
         if record["status"] == "success":
+            emit("duplicate_replay", request_id=request_id, company_id=company_id)
             return {**record, "reply": record["response_text"], "idempotent_replay": True}
         raise HTTPException(status_code=409, detail="AI request has already been submitted.")
 
     try:
         subscription = subscription_service.prepare_gateway_access(company_id)
-    except HTTPException as exc:
+    except HTTPException:
         ai_gateway_repository.fail_request(request_id, "subscription_denied", 0)
-        raise exc
+        emit("subscription_denied", request_id=request_id, company_id=company_id)
+        raise
 
-    providers = _configured_provider_order()
-    if not providers:
-        ai_gateway_repository.fail_request(request_id, "no_provider_configured", 0)
-        raise HTTPException(status_code=503, detail="No server AI provider is configured.")
+    traffic = get_traffic_manager()
+    emit("queue_enter", request_id=request_id, company_id=company_id, **traffic.snapshot())
+    try:
+        async with traffic.slot(company_id):
+            emit("queue_exit", request_id=request_id, company_id=company_id,
+                 queue_wait_ms=round((time.monotonic() - request_started) * 1000, 2), **traffic.snapshot())
+            candidates = route_candidates(capability_tier)
+            if not candidates:
+                ai_gateway_repository.fail_request(request_id, "providers_unavailable", 0)
+                emit("all_providers_unavailable", request_id=request_id, company_id=company_id)
+                raise HTTPException(status_code=503, detail="AI service is temporarily unavailable. Please try again shortly.")
 
-    attempts = 0
-    last_error = "provider_error"
-    last_provider = ""
-    last_model = ""
-    for provider in providers:
-        model = ai_service.get_server_model(provider)
-        last_provider, last_model = provider, model
-        for _ in range(AI_GATEWAY_MAX_RETRIES + 1):
-            attempts += 1
-            try:
-                answer = await asyncio.to_thread(
-                    ai_service.generate_reply, prompt, provider, model, None
-                )
-                reply = str(answer)
-                input_tokens = int(getattr(answer, "input_tokens", 0) or 0)
-                output_tokens = int(getattr(answer, "output_tokens", 0) or 0)
-                if input_tokens + output_tokens <= 0:
-                    ai_gateway_repository.fail_request(
-                        request_id, "provider_usage_unavailable", attempts, provider, model
-                    )
-                    raise HTTPException(
-                        status_code=503,
-                        detail="The provider did not return billable token usage.",
-                    )
-                cost = _provider_cost(model, input_tokens, output_tokens)
-                if cost is None:
-                    ai_gateway_repository.fail_request(
-                        request_id, "provider_cost_unconfigured", attempts, provider, model
-                    )
-                    raise HTTPException(
-                        status_code=503,
-                        detail="AI cost configuration is missing for the selected model.",
-                    )
-                charge_minor = _allowance_charge_minor(cost)
-                if charge_minor > subscription["remaining_allowance_minor"] or not subscription_repository.deduct_allowance(company_id, charge_minor):
-                    ai_gateway_repository.fail_request(
-                        request_id, "allowance_exhausted", attempts, provider, model
-                    )
-                    raise HTTPException(status_code=402, detail="Monthly AI allowance is exhausted.")
-                ai_usage_repository.record_usage(
-                    company_id=company_id,
-                    provider=provider,
-                    model=model,
-                    input_tokens=input_tokens,
-                    output_tokens=output_tokens,
-                    estimated_cost=cost,
-                    status="success",
-                    request_id=request_id,
-                    allowance_deducted_minor=charge_minor,
-                )
-                completed = ai_gateway_repository.complete_request(
-                    request_id,
-                    provider,
-                    model,
-                    reply,
-                    input_tokens,
-                    output_tokens,
-                    cost,
-                    charge_minor,
-                    attempts,
-                )
-                return {**completed, "reply": reply, "idempotent_replay": False}
-            except HTTPException:
-                raise
-            except Exception as exc:
-                last_error = type(exc).__name__.lower()
-        # Only providers explicitly ordered by the operator are authorized fallbacks.
+            attempts = 0
+            last_error = "provider_error"
+            last_provider = last_model = ""
+            for route_index, candidate in enumerate(candidates):
+                provider, model = candidate.provider, candidate.model
+                last_provider, last_model = provider, model
+                if route_index:
+                    emit("fallback", request_id=request_id, company_id=company_id, provider=provider, model=model)
+                emit("provider_selected", request_id=request_id, company_id=company_id,
+                     provider=provider, model=model, priority=candidate.priority,
+                     capability_tier=candidate.capability_tier)
+                for retry_index in range(AI_GATEWAY_MAX_RETRIES + 1):
+                    attempts += 1
+                    try:
+                        answer = await _call_provider(prompt, provider, model)
+                        reply = str(answer)
+                        input_tokens = int(getattr(answer, "input_tokens", 0) or 0)
+                        output_tokens = int(getattr(answer, "output_tokens", 0) or 0)
+                        if input_tokens + output_tokens <= 0:
+                            raise RuntimeError("provider_usage_unavailable")
+                        cost = _provider_cost(model, input_tokens, output_tokens)
+                        if cost is None:
+                            raise RuntimeError("provider_cost_unconfigured")
+                        charge_minor = _allowance_charge_minor(cost)
+                        if charge_minor > subscription["remaining_allowance_minor"]:
+                            ai_gateway_repository.fail_request(request_id, "allowance_exhausted", attempts, provider, model)
+                            emit("allowance_exhausted", request_id=request_id, company_id=company_id)
+                            raise HTTPException(status_code=402, detail="Monthly AI allowance is exhausted.")
+                        completed = ai_gateway_repository.finalize_metered_success(
+                            request_id, company_id, provider, model, reply, input_tokens,
+                            output_tokens, cost, charge_minor, attempts
+                        )
+                        if completed is None:
+                            ai_gateway_repository.fail_request(request_id, "allowance_exhausted", attempts, provider, model)
+                            emit("allowance_exhausted", request_id=request_id, company_id=company_id)
+                            raise HTTPException(status_code=402, detail="Monthly AI allowance is exhausted.")
+                        provider_health.mark_healthy(provider)
+                        emit("request_success", request_id=request_id, company_id=company_id,
+                             provider=provider, model=model, retries=attempts - 1,
+                             latency_ms=round((time.monotonic() - request_started) * 1000, 2))
+                        return {**completed, "reply": reply, "idempotent_replay": False}
+                    except HTTPException:
+                        raise
+                    except Exception as exc:
+                        status = _error_status(exc)
+                        is_rate_limit = status == 429
+                        last_error = "provider_rate_limited" if is_rate_limit else type(exc).__name__.lower()
+                        emit("provider_429" if is_rate_limit else "provider_failure",
+                             request_id=request_id, company_id=company_id, provider=provider,
+                             model=model, retry=retry_index, status_code=status)
+                        if is_rate_limit:
+                            delay = _retry_after(exc)
+                            delay = delay if delay is not None else _backoff(retry_index)
+                            provider_health.mark_cooldown(provider, "rate_limited", delay, "rate_limited")
+                            if route_index + 1 < len(candidates):
+                                break
+                        elif retry_index >= AI_GATEWAY_MAX_RETRIES:
+                            provider_health.mark_cooldown(provider, "temporarily_unavailable",
+                                AI_GATEWAY_PROVIDER_COOLDOWN_SECONDS, "temporarily_unavailable")
+                        if retry_index < AI_GATEWAY_MAX_RETRIES:
+                            delay = _retry_after(exc) if is_rate_limit else _backoff(retry_index)
+                            emit("provider_retry", request_id=request_id, provider=provider,
+                                 retry=retry_index + 1, delay_seconds=round(delay, 3))
+                            await asyncio.sleep(delay)
+                            provider_health.mark_healthy(provider)
+                            continue
+                        break
 
-    ai_gateway_repository.fail_request(
-        request_id, last_error, attempts, last_provider, last_model
-    )
-    ai_usage_repository.record_usage(
-        company_id=company_id,
-        provider=last_provider,
-        model=last_model,
-        status="failed",
-        request_id=request_id,
-    )
-    raise HTTPException(status_code=503, detail="AI providers are temporarily unavailable.")
+            ai_gateway_repository.fail_request(request_id, last_error, attempts, last_provider, last_model)
+            ai_usage_repository.record_usage(company_id, last_provider, last_model,
+                status="failed", request_id=request_id)
+            emit("request_failed", request_id=request_id, company_id=company_id,
+                 retries=max(0, attempts - 1), latency_ms=round((time.monotonic() - request_started) * 1000, 2))
+            raise HTTPException(status_code=503, detail="AI service is temporarily unavailable. Please try again shortly.")
+    except HTTPException as exc:
+        if exc.status_code in (429, 503) and ai_gateway_repository.get_request(request_id)["status"] == "pending":
+            ai_gateway_repository.fail_request(request_id, "queue_rejected", 0)
+        raise
 
 
-def generate_sync(
-    prompt: str,
-    company_id: int,
-    user_id: int | None = None,
-    request_id: str | None = None,
-) -> dict:
-    """Thread-friendly adapter for existing synchronous service modules."""
+def generate_sync(prompt: str, company_id: int, user_id: int | None = None,
+                  request_id: str | None = None) -> dict:
     return asyncio.run(generate(prompt, company_id, user_id, request_id))
