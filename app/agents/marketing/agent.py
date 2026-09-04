@@ -24,7 +24,7 @@ Customer trends:
 - Leads by status: {stats['leads_by_status']}
 """
     enriched = company_profile + trend_ctx
-    reply, source = resolve_with_priority(
+    reply, source = await resolve_with_priority(
         company_id, user_id, text, enriched, language, SYSTEM_PROMPT
     )
     if source == "ai":

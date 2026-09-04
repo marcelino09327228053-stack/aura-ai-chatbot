@@ -93,7 +93,9 @@ def translate(body: TranslateRequest, ctx=Depends(require_auth)):
             status_code=400,
             detail=f"Unsupported language: {body.target_lang}. Supported: {list(trans_engine.SUPPORTED_LANGUAGES)}",
         )
-    translated = trans_engine.translate_text(body.text, body.target_lang, body.source_lang)
+    translated = trans_engine.translate_text(
+        body.text, body.target_lang, body.source_lang, ctx.company_id
+    )
     result = global_repo.save_translation(
         ctx.company_id, body.text, body.source_lang, body.target_lang, translated
     )
@@ -104,7 +106,9 @@ def translate(body: TranslateRequest, ctx=Depends(require_auth)):
 def translate_batch(body: TranslateBatchRequest, ctx=Depends(require_auth)):
     if body.target_lang not in trans_engine.SUPPORTED_LANGUAGES:
         raise HTTPException(status_code=400, detail=f"Unsupported language: {body.target_lang}")
-    return trans_engine.translate_batch(body.texts, body.target_lang, body.source_lang)
+    return trans_engine.translate_batch(
+        body.texts, body.target_lang, body.source_lang, ctx.company_id
+    )
 
 
 @router.post("/detect-language")

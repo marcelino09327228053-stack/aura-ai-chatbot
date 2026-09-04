@@ -1,4 +1,4 @@
-"""Unified AI provider integration for Gemini, OpenAI, Claude, DeepSeek, and Grok."""
+"""Server-side provider adapters used only by the managed AI Gateway."""
 
 import json
 import os
@@ -64,45 +64,50 @@ PROVIDERS = {
             {"id": "grok-4.5", "label": "Powerful", "price": "$$$"},
         ],
     },
+    "groq": {
+        "name": "Groq",
+        "key_env": "GROQ_API_KEY",
+        "model_env": "GROQ_MODEL",
+        "default_model": "llama-3.3-70b-versatile",
+        "models": [
+            {"id": "llama-3.1-8b-instant", "label": "Fast", "price": "$"},
+            {"id": "llama-3.3-70b-versatile", "label": "Balanced", "price": "$$"},
+        ],
+    },
 }
+
+
+class AIResult(str):
+    """String-compatible reply carrying provider-reported token usage."""
+
+    def __new__(cls, text: str, input_tokens: int = 0, output_tokens: int = 0):
+        value = super().__new__(cls, text)
+        value.input_tokens = int(input_tokens or 0)
+        value.output_tokens = int(output_tokens or 0)
+        return value
 
 
 def get_provider_status(company_id: int | None = None) -> list[dict]:
     """Return safe provider metadata without exposing API keys."""
-    customer_status = {}
-    if company_id is not None:
-        from app.database import ai_provider_repository
-        customer_status = ai_provider_repository.list_status(company_id)
-    selected_models = {}
-    if company_id is not None:
-        from app.database import settings_repository
-        selected_models = settings_repository.get_settings(company_id).get(
-            "ai_models", {}
-        )
-
-    def status_model(provider_id: str, config: dict) -> str:
-        selected = selected_models.get(
-            provider_id,
-            os.getenv(config["model_env"], config["default_model"]),
-        )
-        allowed = {item["id"] for item in config["models"]}
-        return selected if selected in allowed else config["default_model"]
-
     return [
         {
             "id": provider_id,
             "name": config["name"],
-            "configured": (
-                provider_id in customer_status
-                or bool(os.getenv(config["key_env"], "").strip())
-            ),
-            "customer_connected": provider_id in customer_status,
-            "key_suffix": customer_status.get(provider_id, {}).get("key_suffix", ""),
-            "model": status_model(provider_id, config),
+            "configured": bool(os.getenv(config["key_env"], "").strip()),
+            "managed_by_gateway": True,
+            "model": get_server_model(provider_id),
             "models": config["models"],
         }
         for provider_id, config in PROVIDERS.items()
     ]
+
+
+def get_server_model(provider: str) -> str:
+    """Return the operator-configured model; customers cannot override it."""
+    config = PROVIDERS[provider]
+    selected = os.getenv(config["model_env"], config["default_model"])
+    allowed = {item["id"] for item in config["models"]}
+    return selected if selected in allowed else config["default_model"]
 
 
 def get_selected_model(company_id: int, provider: str) -> str:
@@ -153,19 +158,24 @@ def _post_json(url: str, payload: dict, headers: dict) -> dict:
         raise RuntimeError(f"Could not connect to AI provider: {exc.reason}") from exc
 
 
-def _gemini_reply(prompt: str, api_key: str, model: str) -> str:
+def _gemini_reply(prompt: str, api_key: str, model: str) -> AIResult:
     client = genai.Client(api_key=api_key)
     try:
         response = client.models.generate_content(
             model=model,
             contents=prompt,
         )
-        return response.text or "No response generated."
+        usage = getattr(response, "usage_metadata", None)
+        return AIResult(
+            response.text or "No response generated.",
+            getattr(usage, "prompt_token_count", 0),
+            getattr(usage, "candidates_token_count", 0),
+        )
     finally:
         client.close()
 
 
-def _openai_reply(prompt: str, api_key: str, model: str) -> str:
+def _openai_reply(prompt: str, api_key: str, model: str) -> AIResult:
     data = _post_json(
         "https://api.openai.com/v1/responses",
         {"model": model, "input": prompt},
@@ -176,10 +186,15 @@ def _openai_reply(prompt: str, api_key: str, model: str) -> str:
         for content in item.get("content", []):
             if content.get("type") == "output_text" and content.get("text"):
                 parts.append(content["text"])
-    return "\n".join(parts).strip() or "No response generated."
+    usage = data.get("usage", {})
+    return AIResult(
+        "\n".join(parts).strip() or "No response generated.",
+        usage.get("input_tokens", 0),
+        usage.get("output_tokens", 0),
+    )
 
 
-def _claude_reply(prompt: str, api_key: str, model: str) -> str:
+def _claude_reply(prompt: str, api_key: str, model: str) -> AIResult:
     data = _post_json(
         "https://api.anthropic.com/v1/messages",
         {
@@ -192,14 +207,16 @@ def _claude_reply(prompt: str, api_key: str, model: str) -> str:
             "anthropic-version": "2023-06-01",
         },
     )
-    return "\n".join(
+    text = "\n".join(
         block.get("text", "")
         for block in data.get("content", [])
         if block.get("type") == "text"
     ).strip() or "No response generated."
+    usage = data.get("usage", {})
+    return AIResult(text, usage.get("input_tokens", 0), usage.get("output_tokens", 0))
 
 
-def _deepseek_reply(prompt: str, api_key: str, model: str) -> str:
+def _deepseek_reply(prompt: str, api_key: str, model: str) -> AIResult:
     data = _post_json(
         "https://api.deepseek.com/chat/completions",
         {
@@ -212,10 +229,15 @@ def _deepseek_reply(prompt: str, api_key: str, model: str) -> str:
     choices = data.get("choices", [])
     if not choices:
         return "No response generated."
-    return choices[0].get("message", {}).get("content", "").strip() or "No response generated."
+    usage = data.get("usage", {})
+    return AIResult(
+        choices[0].get("message", {}).get("content", "").strip() or "No response generated.",
+        usage.get("prompt_tokens", 0),
+        usage.get("completion_tokens", 0),
+    )
 
 
-def _grok_reply(prompt: str, api_key: str, model: str) -> str:
+def _grok_reply(prompt: str, api_key: str, model: str) -> AIResult:
     data = _post_json(
         "https://api.x.ai/v1/chat/completions",
         {
@@ -228,7 +250,29 @@ def _grok_reply(prompt: str, api_key: str, model: str) -> str:
     choices = data.get("choices", [])
     if not choices:
         return "No response generated."
-    return choices[0].get("message", {}).get("content", "").strip() or "No response generated."
+    usage = data.get("usage", {})
+    return AIResult(
+        choices[0].get("message", {}).get("content", "").strip() or "No response generated.",
+        usage.get("prompt_tokens", 0),
+        usage.get("completion_tokens", 0),
+    )
+
+
+def _groq_reply(prompt: str, api_key: str, model: str) -> AIResult:
+    data = _post_json(
+        "https://api.groq.com/openai/v1/chat/completions",
+        {"model": model, "messages": [{"role": "user", "content": prompt}]},
+        {"Authorization": f"Bearer {api_key}"},
+    )
+    choices = data.get("choices", [])
+    if not choices:
+        return AIResult("No response generated.")
+    usage = data.get("usage", {})
+    return AIResult(
+        choices[0].get("message", {}).get("content", "").strip() or "No response generated.",
+        usage.get("prompt_tokens", 0),
+        usage.get("completion_tokens", 0),
+    )
 
 
 def generate_reply(
@@ -253,5 +297,6 @@ def generate_reply(
         "claude": _claude_reply,
         "deepseek": _deepseek_reply,
         "grok": _grok_reply,
+        "groq": _groq_reply,
     }
     return callers[provider](prompt, api_key, selected_model)

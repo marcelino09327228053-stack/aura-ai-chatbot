@@ -274,9 +274,9 @@ def ask_assistant(assistant_type: str, question: str, company_id: int) -> dict:
     global_repo.log_global_action(company_id, f"assistant.{assistant_type}", question[:100])
 
     try:
-        from app.services.ai_service import generate_reply
+        from app.services.ai_gateway import generate_sync
         full_prompt = f"{system_prompt}\n\nUser question: {question}"
-        answer = generate_reply(full_prompt)
+        answer = generate_sync(full_prompt, company_id)["reply"]
     except Exception as exc:
         answer = (
             f"[{assistant_type.title()} Assistant] I'm here to help with your {assistant_type} questions. "

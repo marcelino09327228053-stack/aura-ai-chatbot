@@ -17,7 +17,7 @@ async def run(
     company_profile: str,
     language: str,
 ) -> tuple[str, str]:
-    reply, source = resolve_with_priority(
+    reply, source = await resolve_with_priority(
         company_id, user_id, text, company_profile, language, SYSTEM_PROMPT
     )
     if source == "ai" and "escalat" not in reply.lower():

@@ -135,8 +135,8 @@ def run_agent(company_id: int, agent_role: str, question: str | None = None) -> 
     )
 
     try:
-        from app.services.ai_service import generate_reply
-        ai_response = generate_reply(full_prompt)
+        from app.services.ai_gateway import generate_sync
+        ai_response = generate_sync(full_prompt, company_id)["reply"]
         confidence = 0.82
     except Exception as exc:
         ai_response = (

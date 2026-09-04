@@ -106,7 +106,7 @@ def analyze_contract(company_id: int, text: str, document_name: str = "contract"
     risk_flags = _detect_risk_flags(text, "contract")
 
     # AI summary
-    summary = _ai_summary(text, "legal contract")
+    summary = _ai_summary(company_id, text, "legal contract")
 
     extracted = {
         "parties": parties,
@@ -132,7 +132,7 @@ def analyze_invoice(company_id: int, text: str, document_name: str = "invoice") 
     inv_match = re.search(r"(?:invoice|inv|bill)\s*[#no.:]+\s*([A-Z0-9-]+)", text, re.IGNORECASE)
     invoice_number = inv_match.group(1) if inv_match else "—"
 
-    summary = _ai_summary(text, "business invoice")
+    summary = _ai_summary(company_id, text, "business invoice")
 
     extracted = {
         "invoice_number": invoice_number,
@@ -157,7 +157,7 @@ def analyze_report(company_id: int, text: str, document_name: str = "report") ->
     headers = re.findall(r"^#+\s+(.+)$|^([A-Z][A-Z\s]{4,}):?\s*$", text, re.MULTILINE)
     sections = [h[0] or h[1] for h in headers if any(h)][:8]
 
-    summary = _ai_summary(text, "business report")
+    summary = _ai_summary(company_id, text, "business report")
 
     extracted = {
         "sections": sections,
@@ -191,17 +191,17 @@ def analyze_document(company_id: int, document_type: str, text: str, document_na
 
 # ── AI summary helper ─────────────────────────────────────────────────────────
 
-def _ai_summary(text: str, doc_label: str) -> str:
+def _ai_summary(company_id: int, text: str, doc_label: str) -> str:
     """Generate a 3-sentence plain-language summary using AI."""
     snippet = text[:3000]
     try:
-        from app.services.ai_service import generate_reply
+        from app.services.ai_gateway import generate_sync
         prompt = (
             f"Summarise this {doc_label} in 3 clear, plain-language sentences. "
             f"Focus on: parties involved, key amounts or obligations, and any notable risks.\n\n"
             f"Document:\n{snippet}"
         )
-        return generate_reply(prompt)
+        return generate_sync(prompt, company_id)["reply"]
     except Exception:
         return (
             f"This {doc_label} contains {len(text.split())} words. "

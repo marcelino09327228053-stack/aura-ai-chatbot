@@ -3,6 +3,7 @@ Application configuration from environment variables.
 """
 
 import os
+import json
 
 from dotenv import load_dotenv
 
@@ -21,6 +22,41 @@ PLAN_LIMITS = {
     "pro": {"max_companies": 5, "max_messages_per_day": 5000},
     "enterprise": {"max_companies": None, "max_messages_per_day": None},
 }
+
+
+def _json_env(name: str, default: dict) -> dict:
+    raw = os.getenv(name, "").strip()
+    if not raw:
+        return default
+    try:
+        value = json.loads(raw)
+    except json.JSONDecodeError:
+        return default
+    return value if isinstance(value, dict) else default
+
+
+# These are operational defaults, not final commercial prices. Override the entire
+# catalog with AI_PLAN_CONFIG_JSON in each deployment.
+AI_PLAN_CONFIG = _json_env(
+    "AI_PLAN_CONFIG_JSON",
+    {
+        "free": {"monthly_ai_allowance": 0, "max_companies": 1},
+        "pro": {"monthly_ai_allowance": 10_000, "max_companies": 5},
+        "enterprise": {"monthly_ai_allowance": 100_000, "max_companies": None},
+    },
+)
+
+AI_GATEWAY_PROVIDER_ORDER = tuple(
+    item.strip().lower()
+    for item in os.getenv("AI_GATEWAY_PROVIDER_ORDER", "gemini,openai,claude,groq").split(",")
+    if item.strip()
+)
+AI_GATEWAY_MAX_RETRIES = max(0, int(os.getenv("AI_GATEWAY_MAX_RETRIES", "1")))
+AI_GATEWAY_TOKENS_PER_CREDIT = max(1, int(os.getenv("AI_GATEWAY_TOKENS_PER_CREDIT", "1000")))
+AI_GATEWAY_DEFAULT_REQUEST_CREDITS = max(
+    1, int(os.getenv("AI_GATEWAY_DEFAULT_REQUEST_CREDITS", "1"))
+)
+AI_MODEL_COSTS_USD = _json_env("AI_MODEL_COSTS_USD_JSON", {})
 
 MODULE_NAMES = ("crm", "inventory", "accounting", "hr", "reports", "analytics")
 

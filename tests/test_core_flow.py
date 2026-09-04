@@ -47,6 +47,8 @@ class CoreFlowTests(unittest.TestCase):
         assert response.status_code == 200, response.text
         cls.token = response.json()["token"]
         cls.headers = {"Authorization": f"Bearer {cls.token}"}
+        from app.services.subscription_service import activate_paid_cycle
+        activate_paid_cycle(response.json()["company"]["id"], "pro")
 
     @classmethod
     def tearDownClass(cls):
@@ -99,12 +101,8 @@ class CoreFlowTests(unittest.TestCase):
         first_headers = {"Authorization": f"Bearer {first_token}"}
         first_company = registration.json()["company"]
 
-        upgraded = self.client.post(
-            "/subscription/upgrade",
-            headers=first_headers,
-            json={"plan": "pro"},
-        )
-        self.assertEqual(upgraded.status_code, 200)
+        from app.services.subscription_service import activate_paid_cycle
+        activate_paid_cycle(first_company["id"], "pro")
 
         created = self.client.post(
             "/companies",
@@ -370,9 +368,10 @@ class CoreFlowTests(unittest.TestCase):
         providers = response.json()["providers"]
         self.assertEqual(
             {item["id"] for item in providers},
-            {"gemini", "openai", "claude", "deepseek", "grok"},
+            {"gemini", "openai", "claude", "deepseek", "grok", "groq"},
         )
         self.assertTrue(all("api_key" not in item for item in providers))
+        self.assertTrue(all(item["managed_by_gateway"] for item in providers))
 
     def test_facebook_webhook_verification_and_signature(self):
         os.environ["FACEBOOK_VERIFY_TOKEN"] = "aura-facebook-test-token"
@@ -583,45 +582,26 @@ class CoreFlowTests(unittest.TestCase):
 
         self.client.delete("/webhooks/facebook/connection", headers=self.headers)
 
-    def test_customer_can_connect_and_disconnect_encrypted_provider_key(self):
-        from app.database import ai_provider_repository
-
-        with patch(
-            "app.services.ai_service.generate_reply",
-            return_value="CONNECTED",
-        ):
-            connected = self.client.post(
-                "/ai/providers/openai/connect",
-                headers=self.headers,
-                json={"api_key": "sk-customer-secret-example-1234"},
-            )
-        self.assertEqual(connected.status_code, 200)
-        self.assertEqual(connected.json()["key_suffix"], "1234")
-        status = self.client.get("/ai/providers", headers=self.headers).json()
-        openai = next(item for item in status["providers"] if item["id"] == "openai")
-        self.assertTrue(openai["customer_connected"])
-        self.assertNotIn("secret", str(openai))
-        company_id = self.client.get("/auth/me", headers=self.headers).json()["company"]["id"]
-        self.assertEqual(
-            ai_provider_repository.get_key(company_id, "openai"),
-            "sk-customer-secret-example-1234",
-        )
-
-        disconnected = self.client.delete(
-            "/ai/providers/openai",
+    def test_customer_cannot_manage_server_provider_keys(self):
+        connected = self.client.post(
+            "/ai/providers/openai/connect",
             headers=self.headers,
+            json={"api_key": "sk-customer-secret-example-1234"},
         )
-        self.assertEqual(disconnected.status_code, 200)
-        self.assertTrue(disconnected.json()["disconnected"])
+        self.assertEqual(connected.status_code, 403)
+        self.assertNotIn("sk-customer", connected.text)
+        self.assertEqual(
+            self.client.delete("/ai/providers/openai", headers=self.headers).status_code,
+            403,
+        )
 
-    def test_multiple_ai_providers_run_in_one_chat_request(self):
+    def test_gateway_ignores_customer_provider_selection(self):
         os.environ["OPENAI_API_KEY"] = "test-openai-key"
-        os.environ["DEEPSEEK_API_KEY"] = "test-deepseek-key"
         try:
             with patch(
                 "app.services.ai_service.generate_reply",
                 side_effect=lambda prompt, provider, *args: f"Answer from {provider}",
-            ):
+            ) as generated:
                 response = self.client.post(
                     "/chat",
                     headers=self.headers,
@@ -633,12 +613,11 @@ class CoreFlowTests(unittest.TestCase):
                 )
             self.assertEqual(response.status_code, 200)
             data = response.json()
-            self.assertEqual(len(data["provider_responses"]), 2)
-            self.assertIn("**OpenAI**", data["reply"])
-            self.assertIn("**DeepSeek**", data["reply"])
+            self.assertEqual(len(data["provider_responses"]), 1)
+            self.assertEqual(generated.call_args.args[1], "openai")
+            self.assertIn("Answer from openai", data["reply"])
         finally:
             os.environ["OPENAI_API_KEY"] = ""
-            os.environ["DEEPSEEK_API_KEY"] = ""
 
     def test_company_profile_html_is_cleaned_and_grounds_ai_prompt(self):
         from app.services.chat_service import _build_prompt
@@ -654,13 +633,10 @@ class CoreFlowTests(unittest.TestCase):
         self.assertIn("Do not invent company facts", prompt)
 
     def test_z_paid_subscription_expiration_and_renewal(self):
-        upgraded = self.client.post(
-            "/subscription/upgrade",
-            headers=self.headers,
-            json={"plan": "pro"},
-        )
-        self.assertEqual(upgraded.status_code, 200)
-        self.assertIsNotNone(upgraded.json()["subscription"]["expires_at"])
+        company_id = self.client.get("/auth/me", headers=self.headers).json()["company"]["id"]
+        from app.services.subscription_service import activate_paid_cycle
+        activated = activate_paid_cycle(company_id, "pro")
+        self.assertIsNotNone(activated["expires_at"])
 
         from app.database.connection import get_connection
 
@@ -671,7 +647,7 @@ class CoreFlowTests(unittest.TestCase):
             SET expires_at = '2020-01-01T00:00:00+00:00'
             WHERE company_id = ?
             """,
-            (upgraded.json()["subscription"]["company_id"],),
+            (company_id,),
         )
         conn.commit()
 
@@ -687,13 +663,8 @@ class CoreFlowTests(unittest.TestCase):
         )
         self.assertIn("expired", blocked.json()["reply"].lower())
 
-        renewed = self.client.post(
-            "/subscription/upgrade",
-            headers=self.headers,
-            json={"plan": "pro"},
-        )
-        self.assertEqual(renewed.status_code, 200)
-        self.assertEqual(renewed.json()["subscription"]["status"], "active")
+        renewed = activate_paid_cycle(company_id, "pro")
+        self.assertEqual(renewed["status"], "active")
 
     def test_zz_verified_account_email_change(self):
         requested = self.client.post(

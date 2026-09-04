@@ -22,7 +22,7 @@ async def run(
     catalog = "\n".join(f"- {p['name']} (₱{p['price']}, stock: {p['stock']})" for p in products)
     enriched_profile = company_profile + f"\n\nProduct catalog:\n{catalog or 'No products listed.'}"
 
-    reply, source = resolve_with_priority(
+    reply, source = await resolve_with_priority(
         company_id, user_id, text, enriched_profile, language, SYSTEM_PROMPT
     )
 

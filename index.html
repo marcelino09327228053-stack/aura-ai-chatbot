@@ -2688,10 +2688,10 @@ border:none;">
 </div>
 
 <p style="margin-bottom:8px;" data-i18n="aiModels">AI Models</p>
-<p style="margin:0 0 10px;color:var(--muted);font-size:12px;" data-i18n="selectModelsHelp">
-  Select one or more. Selected models answer at the same time.
+<p style="margin:0 0 10px;color:var(--muted);font-size:12px;">
+  AI access is included with an active plan. Provider keys and model routing are securely managed by the AI Gateway.
 </p>
-<label style="display:flex;gap:8px;align-items:center;margin-bottom:10px;cursor:pointer;">
+<label style="display:none;gap:8px;align-items:center;margin-bottom:10px;cursor:pointer;">
   <input id="selectAllProviders" type="checkbox" onchange="toggleAllProviders(this.checked)">
   <strong data-i18n="selectAllAvailable">Select all available</strong>
 </label>
@@ -4311,32 +4311,15 @@ async function loadAIProviders() {
         <div class="ai-provider-header">
           <label class="ai-provider-choice">
             <input class="provider-checkbox" type="checkbox" value="${item.id}"
-              ${saved.includes(item.id) && item.configured ? "checked" : ""}
-              ${item.configured ? "" : "disabled"}
-              onchange="updateProviderSelection()">
+              ${item.configured ? "checked" : ""} disabled>
             <span class="ai-provider-copy"><strong>${item.name}</strong>
-              <small>${
-            item.customer_connected
-              ? `${t("connected")} ••••${item.key_suffix}`
-              : item.configured ? `${item.model} • ${t("systemKey")}` : t("apiKeyRequired")
-              }</small>
+              <small>${item.configured ? `${item.model} • Managed by AI Gateway` : "Not enabled by system operator"}</small>
             </span>
           </label>
-          <div class="ai-provider-actions">
-          ${item.customer_connected
-            ? `<button type="button" data-provider-status="${item.id}"
-                  title="Open ${item.name} account, billing, and API settings"
-                  onclick="event.preventDefault();event.stopPropagation();openConnectedAIProvider('${item.id}')">${t("connected")}</button>`
-            : item.configured
-              ? `<button type="button" data-provider-status="${item.id}"
-                  title="Open ${item.name} account, billing, and API settings"
-                  onclick="event.preventDefault();event.stopPropagation();openConnectedAIProvider('${item.id}')">${t("manage")}</button>`
-              : `<button type="button" onclick="event.preventDefault();event.stopPropagation();connectAIProvider('${item.id}','${item.name}')">${t("connect")}</button>`}
-          </div>
+          <div class="ai-provider-actions"><span class="badge">${item.configured ? "Available" : "Offline"}</span></div>
         </div>
         ${(item.models || []).length ? `
-            <select class="ai-provider-model" aria-label="Choose ${item.name} model"
-              onchange="updateAIProviderModel('${item.id}',this.value)"
+            <select class="ai-provider-model" aria-label="${item.name} model" disabled
               style="padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--surface-strong);color:var(--text);">
               ${(item.models || []).map(model => `
                 <option value="${model.id}" ${model.id === item.model ? "selected" : ""}>

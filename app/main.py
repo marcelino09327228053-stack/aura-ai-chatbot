@@ -136,6 +136,10 @@ def create_app() -> FastAPI:
     async def crm_page():
         return FileResponse("crm.html")
 
+    @application.get("/knowledge")
+    async def knowledge_page():
+        return FileResponse("knowledge.html")
+
     @application.get("/infrastructure")
     async def infrastructure_page():
         return FileResponse("infrastructure.html")

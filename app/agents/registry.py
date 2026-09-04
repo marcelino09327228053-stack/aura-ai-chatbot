@@ -17,6 +17,7 @@ async def route_message(
     providers: list[str] | None = None,
     user_id: str = "default",
     system_guide: bool = False,
+    request_id: str | None = None,
 ) -> dict:
     if agent_type:
         return await handle_agent_chat(
@@ -38,4 +39,6 @@ async def route_message(
         session_id=session_id,
         providers=providers,
         system_guide=system_guide,
+        user_id=int(user_id) if str(user_id).isdigit() else None,
+        request_id=request_id,
     )

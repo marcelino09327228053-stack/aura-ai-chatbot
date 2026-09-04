@@ -50,12 +50,12 @@ ul { padding-left:18px; color:var(--muted); }
       <div class="row"><span class="muted">AI Chatbot subscription</span><span id="statusBadge" class="badge">Loading</span></div>
       <div id="planName" class="metric">—</div>
       <div id="expiryText" class="muted">Loading subscription details…</div>
-      <button id="renewButton" style="margin-top:16px" onclick="renewCurrent()">Renew subscription</button>
+      <button id="renewButton" style="margin-top:16px" disabled>Payment activation coming soon</button>
     </article>
     <article class="card">
-      <span class="muted">AI Chatbot usage today</span>
+      <span class="muted">Monthly AI allowance</span>
       <div id="messageUsage" class="metric">—</div>
-      <div class="muted">AI provider charges are paid separately through your own provider account.</div>
+      <div id="remainingAllowance" class="muted">Managed AI access; no provider API key is required.</div>
     </article>
 
     <article class="card wide">
@@ -75,7 +75,7 @@ ul { padding-left:18px; color:var(--muted); }
 
     <article class="card wide">
       <h2>AI provider consumption</h2>
-      <p class="muted">Requests and tokens are tracked by MB Future Tech AI Chatbot. Monetary cost is an estimate only when provider pricing data is available; your provider billing page remains the official bill.</p>
+      <p class="muted">Requests and tokens are securely routed through the MB Future Tech AI Gateway. Provider credentials remain server-side.</p>
       <div style="overflow:auto">
         <table>
           <thead><tr><th>Provider</th><th>Requests</th><th>Input tokens</th><th>Output tokens</th><th>Estimated cost</th></tr></thead>
@@ -126,8 +126,8 @@ async function loadSubscription(){
     ? `${sub.days_remaining} day(s) remaining • Expires ${dateText(sub.expires_at)}`
     : "Free plan • No expiration";
   document.getElementById("renewButton").style.display=sub.plan==="free"?"none":"inline-block";
-  document.getElementById("messageUsage").textContent=data.usage.messages_today+
-    (data.limits.max_messages_per_day===null?" messages":` / ${data.limits.max_messages_per_day}`);
+  document.getElementById("messageUsage").textContent=`${sub.ai_usage_consumed||0} / ${sub.monthly_ai_allowance||0} credits`;
+  document.getElementById("remainingAllowance").textContent=`${sub.remaining_allowance||0} credits remaining in this billing cycle.`;
   if(data.notification){
     const notice=document.getElementById("expiryNotice");
     notice.style.display="block";
@@ -137,11 +137,11 @@ async function loadSubscription(){
   document.getElementById("planList").innerHTML=plans.map(plan=>{
     const active=plan.plan===sub.plan?"active":"";
     const companies=plan.max_companies===null?"Unlimited":plan.max_companies;
-    const messages=plan.max_messages_per_day===null?"Unlimited":plan.max_messages_per_day;
-    const price=plan.price===null?"Contact us":plan.price===0?"Free":money(plan.price)+"/month";
+    const allowance=plan.monthly_ai_allowance||0;
+    const price="Pricing to be configured";
     return `<div class="card ${active}"><h3>${plan.plan.toUpperCase()}</h3><div class="metric">${price}</div>
-      <ul><li>${companies} companies</li><li>${messages} messages/day</li>${plan.plan!=="free"?"<li>30-day subscription period</li>":""}</ul>
-      ${active?`<button disabled>Current plan</button>`:`<button onclick="upgrade('${plan.plan}')">Select plan</button>`}</div>`;
+      <ul><li>${companies} companies</li><li>${allowance} monthly AI credits</li><li>Server-managed AI access</li></ul>
+      ${active?`<button disabled>Current plan</button>`:`<button disabled>Payment integration coming soon</button>`}</div>`;
   }).join("");
   const payments=data.payment_history||[];
   document.getElementById("paymentRows").innerHTML=payments.length?payments.map(p=>

@@ -40,24 +40,17 @@ class CompanyProfileManagerTests(unittest.TestCase):
         self.assertEqual(result["missing_information"], ["Business hours"])
         self.assertEqual(result["conflicts"][0]["new"], "5:00 PM")
 
-    @patch("app.services.company_profile_manager.ai_service.generate_reply")
-    @patch("app.services.company_profile_manager.ai_provider_repository.get_key")
-    @patch("app.services.company_profile_manager.ai_service.get_selected_model")
-    @patch("app.services.company_profile_manager.ai_service.get_provider_status")
-    def test_uses_connected_provider_without_inventing_client_side_key(
-        self, statuses, selected_model, get_key, generate_reply
-    ):
-        statuses.return_value = [{"id": "gemini", "configured": True}]
-        selected_model.return_value = "gemini-test"
-        get_key.return_value = "encrypted-server-key"
-        generate_reply.return_value = (
-            '{"arranged_profile":"Company Overview\\nTest",'
-            '"missing_information":[],"conflicts":[]}'
-        )
+    @patch("app.services.company_profile_manager.ai_gateway.generate_sync")
+    def test_uses_managed_gateway_without_customer_key(self, generate_reply):
+        generate_reply.return_value = {
+            "reply": '{"arranged_profile":"Company Overview\\nTest",'
+                     '"missing_information":[],"conflicts":[]}',
+            "provider": "gemini",
+            "model": "gemini-test",
+        }
         result = review_company_profile("Test", 7)
         self.assertEqual(result["provider"], "gemini")
         generate_reply.assert_called_once()
-        self.assertEqual(generate_reply.call_args.args[3], "encrypted-server-key")
         prompt = generate_reply.call_args.args[0]
         self.assertIn("Build arranged_profile ONLY", prompt)
         self.assertIn("Treat the draft as a complete replacement", prompt)

@@ -9,7 +9,7 @@ Priority 4: AI provider (Gemini)
 
 from app.agents import repository as agent_repo
 from app.database.faq_repository import find_faq_answer, list_faqs
-from app.services import ai_service
+from app.services import ai_gateway
 
 
 def search_faq_keyword(company_id: int, text: str) -> str | None:
@@ -39,7 +39,7 @@ def get_memory_context(company_id: int, user_id: str, limit: int = 5) -> str:
     return "Previous context:\n" + "\n".join(f"- {line}" for line in lines)
 
 
-def resolve_with_priority(
+async def resolve_with_priority(
     company_id: int,
     user_id: str,
     text: str,
@@ -89,5 +89,9 @@ Company Information:
 User:
 {text}
 """
-    reply = ai_service.generate_reply(prompt)
-    return reply, "ai"
+    result = await ai_gateway.generate(
+        prompt,
+        company_id=company_id,
+        user_id=int(user_id) if str(user_id).isdigit() else None,
+    )
+    return result["reply"], "ai"

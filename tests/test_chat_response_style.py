@@ -68,13 +68,15 @@ class ChatResponseStyleTests(unittest.TestCase):
         self.assertTrue(result.startswith("Ang mga produkto at serbisyong inaalok ng kumpanya namin ay:"))
 
     @patch("app.services.company_profile_manager.build_response_style_instruction")
-    @patch("app.services.company_profile_manager.ai_service.generate_reply")
-    @patch("app.services.company_profile_manager._provider_for_company")
+    @patch("app.services.company_profile_manager.ai_gateway.generate_sync")
     def test_profile_test_includes_saved_response_style(
-        self, provider_mock, reply_mock, style_mock
+        self, reply_mock, style_mock
     ):
-        provider_mock.return_value = ("gemini", "test-model", "test-key")
-        reply_mock.return_value = "Ang pangalan ng kumpanya namin ay Example Company."
+        reply_mock.return_value = {
+            "reply": "Ang pangalan ng kumpanya namin ay Example Company.",
+            "provider": "gemini",
+            "model": "test-model",
+        }
         style_mock.return_value = "Response style preference: Friendly and concise."
         result = run_profile_test(
             "Company name: Example Company.",

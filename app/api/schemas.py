@@ -12,6 +12,7 @@ class Message(BaseModel):
     agent_type: str | None = None
     providers: list[str] | None = None
     mode: str | None = None
+    request_id: str | None = None
 
 
 class FaqCreate(BaseModel):

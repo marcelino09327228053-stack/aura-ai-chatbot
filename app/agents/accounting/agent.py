@@ -26,6 +26,6 @@ Financial Summary:
 Today's income: {daily['income']}, expenses: {daily['expenses']}, profit: {daily['profit']}
 """
     enriched = company_profile + finance_ctx
-    return resolve_with_priority(
+    return await resolve_with_priority(
         company_id, user_id, text, enriched, language, SYSTEM_PROMPT
     )

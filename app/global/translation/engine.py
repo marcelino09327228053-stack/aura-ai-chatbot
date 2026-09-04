@@ -148,7 +148,9 @@ LANGUAGE_META = {
 }
 
 
-def translate_text(text: str, target_lang: str, source_lang: str = "en") -> str:
+def translate_text(
+    text: str, target_lang: str, source_lang: str = "en", company_id: int | None = None
+) -> str:
     """
     Translate `text` from `source_lang` to `target_lang`.
 
@@ -168,22 +170,26 @@ def translate_text(text: str, target_lang: str, source_lang: str = "en") -> str:
 
     # AI fallback — build a structured prompt
     try:
-        from app.services.ai_service import generate_reply
+        from app.services.ai_gateway import generate_sync
+        if company_id is None:
+            raise ValueError("Customer context is required for AI translation.")
         prompt = (
             f"Translate the following text from {SUPPORTED_LANGUAGES.get(source_lang, source_lang)} "
             f"to {SUPPORTED_LANGUAGES.get(target_lang, target_lang)}. "
             f"Return ONLY the translated text, no explanation.\n\nText: {text}"
         )
-        return generate_reply(prompt)
+        return generate_sync(prompt, company_id)["reply"]
     except Exception:
         return f"[{target_lang.upper()}] {text}"
 
 
-def translate_batch(texts: list[str], target_lang: str, source_lang: str = "en") -> list[dict]:
+def translate_batch(
+    texts: list[str], target_lang: str, source_lang: str = "en", company_id: int | None = None
+) -> list[dict]:
     return [
         {
             "source": t,
-            "translated": translate_text(t, target_lang, source_lang),
+            "translated": translate_text(t, target_lang, source_lang, company_id),
             "target_lang": target_lang,
         }
         for t in texts

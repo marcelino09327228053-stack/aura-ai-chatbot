@@ -28,6 +28,6 @@ HR Summary:
 """
     enriched = company_profile + hr_context
 
-    return resolve_with_priority(
+    return await resolve_with_priority(
         company_id, user_id, text, enriched, language, SYSTEM_PROMPT
     )

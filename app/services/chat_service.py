@@ -2,7 +2,6 @@
 Chat orchestration: voice commands, FAQ lookup, AI providers, optional TTS.
 """
 
-import asyncio
 import html
 import os
 import re
@@ -11,13 +10,12 @@ from html.parser import HTMLParser
 from fastapi import HTTPException
 
 from app.database import (
-    ai_provider_repository,
-    ai_usage_repository,
     conversation_repository,
     usage_repository,
 )
 from app.database.knowledge_repository import search as search_knowledge
-from app.services import ai_service, tts_service
+from app.database.faq_repository import find_faq_answer
+from app.services import ai_gateway, tts_service
 from app.services import customer_memory_service
 from app.services.response_style_service import build_response_style_instruction
 from app.services.subscription_service import check_message_limit
@@ -231,13 +229,13 @@ Platform capabilities you may explain:
 - Company Workspace and Company Profile Manager: paste or edit company information,
   Save & Auto Edit, review AI suggestions, activate a profile, undo changes, search the
   profile, test sample customer questions, and restore or delete profile versions.
-- AI providers: customers bring their own API key (BYOK), select an available model,
-  connect or disconnect Gemini, OpenAI, Claude, DeepSeek, or Grok, and pay the AI
-  provider separately from the MB Future Tech subscription.
+- AI access: an active subscription includes a monthly AI allowance. Provider accounts,
+  API keys, model selection, retries, and authorized fallbacks are securely managed by
+  the server-side AI Gateway. Customers never need to supply a provider API key.
 - Social Connections: connect supported business messaging channels such as Facebook
   Messenger; other displayed channels may be marked Coming soon.
 - Multiple dashboards: each business or Page should use its own dashboard and company
-  profile, while the account may reuse its connected AI provider where allowed.
+  profile, while all AI requests remain isolated to the active customer allowance.
 - Language and voice settings, microphone speech-to-text, themes and animated
   backgrounds, billing, analytics and reports, attachments, and account/profile settings.
 - Test Your AI is for checking customer answers based on the active company profile.
@@ -271,6 +269,8 @@ async def handle_chat(
     session_id: str | None = None,
     providers: list[str] | None = None,
     system_guide: bool = False,
+    user_id: int | None = None,
+    request_id: str | None = None,
 ) -> dict:
     """
     Process a chat message and return {"reply": ...} or {"reply": ..., "audio": ...}.
@@ -313,6 +313,24 @@ async def handle_chat(
 
         usage_repository.record_message(company_id)
 
+        faq_answer = None if system_guide else find_faq_answer(text, company_id)
+        if faq_answer:
+            reply = _company_representative_reply(faq_answer)
+            conversation_repository.add_message(
+                company_id, session_id, "assistant", reply
+            )
+            result = {
+                "reply": reply,
+                "session_id": session_id,
+                "provider_responses": [],
+                "sources": [{"type": "faq"}],
+            }
+            if use_voice:
+                result["audio"] = await tts_service.text_to_speech(
+                    reply, voice_type, language
+                )
+            return result
+
         recent_messages = conversation_repository.list_messages(company_id, session_id, 13)
         previous_messages = recent_messages[:-1]
         conversation_context = "\n".join(
@@ -341,61 +359,23 @@ async def handle_chat(
                 earlier_summary,
             )
         )
-        requested = list(dict.fromkeys(providers or ["gemini"]))
-        valid_ids = {item["id"] for item in ai_service.get_provider_status(company_id)}
-        requested = [provider for provider in requested if provider in valid_ids]
-        if not requested:
-            requested = ["gemini"]
-
-        async def call_provider(provider: str) -> dict:
-            name = ai_service.PROVIDERS[provider]["name"]
-            try:
-                customer_key = ai_provider_repository.get_key(company_id, provider)
-                selected_model = ai_service.get_selected_model(company_id, provider)
-                answer = await asyncio.to_thread(
-                    ai_service.generate_reply,
-                    prompt,
-                    provider,
-                    selected_model,
-                    customer_key,
-                )
-                return {
-                    "provider": provider,
-                    "name": name,
-                    "reply": _professional_plain_reply(answer),
-                    "ok": True,
-                }
-            except Exception as exc:
-                return {
-                    "provider": provider,
-                    "name": name,
-                    "reply": str(exc),
-                    "ok": False,
-                }
-
-        provider_responses = await asyncio.gather(
-            *(call_provider(provider) for provider in requested)
+        # Provider hints from customers are intentionally ignored. Selection and
+        # authorized fallback order are controlled centrally by the Gateway.
+        del providers
+        gateway_result = await ai_gateway.generate(
+            prompt,
+            company_id=company_id,
+            user_id=user_id,
+            request_id=request_id,
         )
-        for item in provider_responses:
-            config = ai_service.PROVIDERS[item["provider"]]
-            ai_usage_repository.record_usage(
-                company_id=company_id,
-                provider=item["provider"],
-                model=ai_service.get_selected_model(company_id, item["provider"]),
-                status="success" if item["ok"] else "failed",
-            )
-        successful = [item for item in provider_responses if item["ok"]]
-        if len(successful) == 1:
-            reply = successful[0]["reply"]
-        elif successful:
-            reply = "\n\n".join(
-                f"{item['name']}:\n{item['reply']}" for item in successful
-            )
-        else:
-            reply = (
-                "No selected AI provider is ready. Add an API key in the .env file, "
-                "then restart MB Future Tech AI Chatbot."
-            )
+        reply = gateway_result["reply"]
+        successful = [{
+            "provider": gateway_result["provider"],
+            "name": gateway_result["provider"],
+            "reply": reply,
+            "ok": True,
+        }]
+        provider_responses = successful
 
         reply = _professional_plain_reply(reply) if system_guide else _company_representative_reply(reply)
         conversation_repository.add_message(company_id, session_id, "assistant", reply)
@@ -423,16 +403,16 @@ Previous summary:
 Conversation to compact:
 {transcript}
 """
-                    summary_provider = successful[0]["provider"]
-                    summary = await asyncio.to_thread(
-                        ai_service.generate_reply,
+                    summary_result = await ai_gateway.generate(
                         summary_prompt,
-                        summary_provider,
-                        ai_service.get_selected_model(company_id, summary_provider),
-                        ai_provider_repository.get_key(company_id, summary_provider),
+                        company_id=company_id,
+                        user_id=user_id,
+                        request_id=f"{request_id or session_id}:summary:{total_messages}",
                     )
                     customer_memory_service.save_conversation_summary(
-                        company_id, contact_key, _professional_plain_reply(summary)
+                        company_id,
+                        contact_key,
+                        _professional_plain_reply(summary_result["reply"]),
                     )
                 except Exception:
                     # Summary memory is optional and must never block a customer reply.

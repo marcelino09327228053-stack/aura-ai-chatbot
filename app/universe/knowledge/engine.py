@@ -5,7 +5,7 @@ from __future__ import annotations
 from app.database import faq_repository as faq_repo
 from app.database import memory_repository as mem_repo
 from app.infrastructure.database import get_connection
-from app.services.ai_service import generate_reply
+from app.services.ai_gateway import generate_sync
 from app.universe import repository as uni_repo
 
 
@@ -113,7 +113,7 @@ def generate_automatic_summary(company_id: int, summary_type: str = "daily") -> 
         "Focus on actionable insights for the business team."
     )
     try:
-        content = generate_reply(prompt)
+        content = generate_sync(prompt, company_id)["reply"]
     except Exception:
         content = f"Summary of {len(entries)} knowledge items across document, FAQ, and customer sources."
 
