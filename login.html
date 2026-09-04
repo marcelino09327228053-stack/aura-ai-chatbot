@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MB Future Tech — AI Chatbot | Sign in</title>
+<style>
+* { box-sizing: border-box; }
+body {
+  font-family: Arial, sans-serif;
+  background: #0f172a;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  margin: 0;
+  padding: 20px;
+}
+.card {
+  width: 400px;
+  max-width: 100%;
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 14px;
+  padding: 26px;
+}
+h1 { margin: 0 0 8px; font-size: 25px; }
+.subtitle { color: #94a3b8; margin: 0 0 22px; line-height: 1.45; }
+label { display: block; margin-bottom: 7px; font-size: 14px; }
+input {
+  width: 100%;
+  padding: 13px;
+  margin-bottom: 14px;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  background: #0f172a;
+  color: white;
+  font-size: 16px;
+}
+input:focus { outline: 2px solid #3b82f6; border-color: transparent; }
+button {
+  width: 100%;
+  padding: 13px;
+  border: none;
+  border-radius: 8px;
+  background: #3b82f6;
+  color: white;
+  font-weight: bold;
+  cursor: pointer;
+}
+button:disabled { opacity: .65; cursor: wait; }
+.secondary { background: #334155; margin-top: 10px; }
+.google-button { background: white; color: #202124; border: 1px solid #dadce0; display:flex; align-items:center; justify-content:center; gap:11px; }
+.google-button:hover { background:#f8fafd; }
+.google-g { font:900 20px/1 Arial; color:#4285f4; }
+.divider { display:flex; align-items:center; gap:12px; color:#94a3b8; font-size:12px; margin:18px 0; }
+.divider::before,.divider::after { content:""; height:1px; background:#334155; flex:1; }
+.links { margin-top: 18px; text-align: center; font-size: 14px; }
+a { color: #60a5fa; text-decoration: none; }
+.message { font-size: 14px; margin-bottom: 14px; display: none; line-height: 1.4; }
+.error { color: #fca5a5; }
+.success { color: #86efac; }
+.dev-code {
+  display: none;
+  margin: 0 0 14px;
+  padding: 12px;
+  border: 1px dashed #60a5fa;
+  border-radius: 8px;
+  background: #172554;
+  text-align: center;
+}
+.dev-code strong { font-size: 24px; letter-spacing: 5px; display: block; margin-top: 5px; }
+.trust { color: #94a3b8; font-size: 12px; margin: 16px 0 0; text-align: center; }
+#codeStep { display: none; }
+</style>
+</head>
+<body>
+<main class="card">
+  <h1>Sign in to MB Future Tech AI Chatbot</h1>
+  <p class="subtitle">No password needed. We will send a one-time confirmation code to your email.</p>
+
+  <div id="message" class="message"></div>
+  <div id="devCode" class="dev-code">
+    Local development code
+    <strong id="devCodeValue"></strong>
+  </div>
+
+  <button id="googleButton" class="google-button" onclick="startGoogleLogin()">
+    <span class="google-g">G</span><span>Continue with Google</span>
+  </button>
+  <div class="divider"><span>OR CONTINUE WITH ANY EMAIL</span></div>
+
+  <section id="emailStep">
+    <label for="email">Email address</label>
+    <input id="email" type="email" autocomplete="email" placeholder="you@example.com">
+    <button id="sendButton" onclick="sendCode()">Send confirmation code</button>
+  </section>
+
+  <section id="codeStep">
+    <label for="code">6-digit confirmation code</label>
+    <input id="code" type="text" inputmode="numeric" autocomplete="one-time-code"
+      maxlength="6" placeholder="000000">
+    <label for="companyName">Company name <span style="color:#94a3b8;">(for new accounts)</span></label>
+    <input id="companyName" type="text" autocomplete="organization" placeholder="My Company">
+    <button id="verifyButton" onclick="verifyCode()">Verify and continue</button>
+    <button class="secondary" onclick="changeEmail()">Use a different email</button>
+  </section>
+
+  <p class="trust">The code expires after 10 minutes and can only be used once.</p>
+  <div class="links"><a href="/">Back to chat</a></div>
+</main>
+
+<script>
+const emailInput = document.getElementById("email");
+const codeInput = document.getElementById("code");
+
+function startGoogleLogin() {
+  window.location.href = "/auth/google/start";
+}
+
+async function loadGoogleStatus() {
+  try {
+    const response = await fetch("/auth/google/status");
+    const data = await response.json();
+    const button = document.getElementById("googleButton");
+    if (!data.available) {
+      button.disabled = true;
+      button.title = "Google sign-in needs server configuration";
+      button.querySelector("span:last-child").textContent = "Google sign-in — setup required";
+    }
+  } catch (_) {}
+  const error = new URLSearchParams(location.search).get("google_error");
+  if (error) showMessage("Google sign-in was cancelled. You can still continue with any email.", "error");
+}
+
+function showMessage(text, type) {
+  const box = document.getElementById("message");
+  box.textContent = text;
+  box.className = "message " + type;
+  box.style.display = "block";
+}
+
+function setBusy(buttonId, busy) {
+  document.getElementById(buttonId).disabled = busy;
+}
+
+async function sendCode() {
+  const email = emailInput.value.trim();
+  document.getElementById("devCode").style.display = "none";
+  if (!email || !emailInput.checkValidity()) {
+    showMessage("Enter a valid email address.", "error");
+    return;
+  }
+
+  setBusy("sendButton", true);
+  try {
+    const res = await fetch("/auth/request-code", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({email: email})
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      showMessage(data.detail || "Unable to send confirmation code.", "error");
+      return;
+    }
+
+    document.getElementById("emailStep").style.display = "none";
+    document.getElementById("codeStep").style.display = "block";
+    showMessage(data.message, "success");
+
+    if (data.development_code) {
+      document.getElementById("devCodeValue").textContent = data.development_code;
+      document.getElementById("devCode").style.display = "block";
+      codeInput.value = data.development_code;
+    }
+    codeInput.focus();
+  } catch (error) {
+    showMessage("Connection error. Please try again.", "error");
+  } finally {
+    setBusy("sendButton", false);
+  }
+}
+
+async function verifyCode() {
+  const code = codeInput.value.trim();
+  if (!/^\d{6}$/.test(code)) {
+    showMessage("Enter the 6-digit confirmation code.", "error");
+    return;
+  }
+
+  setBusy("verifyButton", true);
+  try {
+    const res = await fetch("/auth/verify-code", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({
+        email: emailInput.value.trim(),
+        code: code,
+        company_name: document.getElementById("companyName").value.trim() || null
+      })
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      showMessage(data.detail || "Verification failed.", "error");
+      return;
+    }
+
+    localStorage.setItem("aura_token", data.token);
+    localStorage.setItem("aura_company_id", data.company.id);
+    window.location.href = "/";
+  } catch (error) {
+    showMessage("Connection error. Please try again.", "error");
+  } finally {
+    setBusy("verifyButton", false);
+  }
+}
+
+function changeEmail() {
+  document.getElementById("codeStep").style.display = "none";
+  document.getElementById("emailStep").style.display = "block";
+  document.getElementById("devCode").style.display = "none";
+  showMessage("Enter the email address you want to use.", "success");
+  emailInput.focus();
+}
+
+emailInput.addEventListener("keydown", function(event) {
+  if (event.key === "Enter") sendCode();
+});
+codeInput.addEventListener("keydown", function(event) {
+  if (event.key === "Enter") verifyCode();
+});
+loadGoogleStatus();
+</script>
+</body>
+</html>

@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>MB Future Tech — AI Chatbot | Developer Plugins</title>
+<style>
+* { box-sizing: border-box; }
+body {
+  font-family: Arial;
+  background: #0f172a;
+  color: white;
+  margin: 0;
+  padding: 20px;
+}
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+.card {
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 16px;
+}
+button, .btn {
+  padding: 10px 14px;
+  border: none;
+  border-radius: 8px;
+  background: #3b82f6;
+  color: white;
+  cursor: pointer;
+  font-weight: bold;
+  text-decoration: none;
+  display: inline-block;
+  margin-right: 8px;
+  margin-bottom: 8px;
+}
+.btn-secondary { background: #334155; }
+.btn-danger { background: #ef4444; }
+.btn-success { background: #22c55e; }
+input, textarea, select {
+  padding: 10px;
+  border: none;
+  border-radius: 8px;
+  background: #0f172a;
+  color: white;
+  margin-right: 8px;
+  margin-bottom: 8px;
+}
+.item {
+  background: #334155;
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 10px;
+}
+.tag {
+  display: inline-block;
+  background: #1e293b;
+  border-radius: 4px;
+  padding: 2px 8px;
+  font-size: 12px;
+  margin-right: 4px;
+  color: #94a3b8;
+}
+.log-error { color: #f87171; }
+.log-info { color: #94a3b8; }
+</style>
+<script src="/static/aura-notifications.js"></script>
+</head>
+<body>
+<div class="header">
+  <h1>🔌 Developer Plugins</h1>
+  <div>
+    <a href="/dashboard" class="btn btn-secondary">Dashboard</a>
+    <a href="/" class="btn btn-secondary">Chat</a>
+    <button class="btn-danger" onclick="logout()">Logout</button>
+  </div>
+</div>
+
+<div class="card">
+  <h2 style="margin-top:0;">Platform Status</h2>
+  <div id="platformStatus" style="color:#94a3b8;">Loading...</div>
+</div>
+
+<div class="card">
+  <h2 style="margin-top:0;">Marketplace</h2>
+  <div id="marketplaceList"></div>
+</div>
+
+<div class="card">
+  <h2 style="margin-top:0;">Installed Plugins</h2>
+  <div id="installedList"></div>
+</div>
+
+<div class="card">
+  <h2 style="margin-top:0;">API Keys</h2>
+  <p style="color:#94a3b8; font-size:13px;">Use <code>X-Plugin-API-Key</code> header for external plugin execution.</p>
+  <input id="apiKeyName" placeholder="Key name (e.g. CI pipeline)">
+  <button onclick="createApiKey()">Create API Key</button>
+  <div id="apiKeyList" style="margin-top:12px;"></div>
+</div>
+
+<div class="card">
+  <h2 style="margin-top:0;">Plugin Logs</h2>
+  <div id="pluginLogs" style="max-height:300px; overflow-y:auto;"></div>
+</div>
+
+<script>
+function authHeaders() {
+  const token = localStorage.getItem("aura_token");
+  if (!token) {
+    window.location.href = "/login";
+    return null;
+  }
+  return {
+    "Content-Type": "application/json",
+    "Authorization": "Bearer " + token
+  };
+}
+
+function escapeHtml(text) {
+  return String(text)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+function logout() {
+  localStorage.removeItem("aura_token");
+  localStorage.removeItem("aura_company_id");
+  fetch("/auth/logout", { method: "POST" });
+  window.location.href = "/login";
+}
+
+async function loadDashboard() {
+  const headers = authHeaders();
+  if (!headers) return;
+
+  try {
+    const res = await fetch("/api/plugins/dashboard", { headers: headers });
+    if (res.status === 403) {
+      document.getElementById("platformStatus").textContent =
+        "Plugin platform disabled. Set PLUGINS_ENABLED=true in .env and restart.";
+      return;
+    }
+    if (!res.ok) {
+      document.getElementById("platformStatus").textContent = "Failed to load plugin dashboard.";
+      return;
+    }
+
+    const data = await res.json();
+    document.getElementById("platformStatus").textContent =
+      "Plugin platform active — " + data.installed.length + " installed, " +
+      data.marketplace.length + " available in marketplace.";
+
+    document.getElementById("marketplaceList").innerHTML = data.marketplace.map(function(p) {
+      const installed = data.installed.some(function(i) { return i.plugin_key === p.plugin_key; });
+      return `
+        <div class="item">
+          <strong>${escapeHtml(p.name)}</strong> v${escapeHtml(p.version)}
+          <div style="color:#94a3b8; font-size:13px;">${escapeHtml(p.description)}</div>
+          <div style="margin-top:6px;">
+            ${(p.permissions || []).map(function(perm) {
+              return '<span class="tag">' + escapeHtml(perm) + '</span>';
+            }).join("")}
+          </div>
+          <div style="margin-top:8px;">
+            ${installed
+              ? '<span style="color:#22c55e;">Installed</span>'
+              : '<button onclick="installPlugin(\'' + p.plugin_key + '\')">Install</button>'}
+          </div>
+        </div>
+      `;
+    }).join("");
+
+    document.getElementById("installedList").innerHTML = data.installed.length
+      ? data.installed.map(function(p) {
+          const perms = (p.manifest && p.manifest.permissions) || [];
+          return `
+            <div class="item">
+              <strong>${escapeHtml(p.name)}</strong> v${escapeHtml(p.version)}
+              <div style="color:#94a3b8; font-size:13px;">${escapeHtml(p.description)}</div>
+              <div style="margin-top:6px;">
+                ${perms.map(function(perm) {
+                  return '<span class="tag">' + escapeHtml(perm) + '</span>';
+                }).join("")}
+              </div>
+              <div style="margin-top:8px;">
+                <span style="color:${p.enabled ? '#22c55e' : '#94a3b8'};">
+                  ${p.enabled ? 'Enabled' : 'Disabled'}
+                </span>
+                <button class="btn-secondary" onclick="togglePlugin(${p.id}, ${!p.enabled})">
+                  ${p.enabled ? 'Disable' : 'Enable'}
+                </button>
+                <button class="btn-success" onclick="runPlugin(${p.id})">Run</button>
+                <button class="btn-secondary" onclick="editSettings(${p.id})">Settings</button>
+                <button class="btn-danger" onclick="uninstallPlugin(${p.id})">Remove</button>
+              </div>
+            </div>
+          `;
+        }).join("")
+      : "<p style='color:#94a3b8;'>No plugins installed yet.</p>";
+
+    document.getElementById("pluginLogs").innerHTML = data.logs.length
+      ? data.logs.map(function(log) {
+          return `
+            <div class="item ${log.level === 'error' ? 'log-error' : 'log-info'}" style="font-size:13px;">
+              <strong>Plugin #${log.plugin_id}</strong> [${escapeHtml(log.level)}]
+              <div>${escapeHtml(log.message)}</div>
+              <div style="color:#64748b;">${escapeHtml(log.created_at)}</div>
+            </div>
+          `;
+        }).join("")
+      : "<p style='color:#94a3b8;'>No logs yet.</p>";
+
+    document.getElementById("apiKeyList").innerHTML = data.api_keys.length
+      ? data.api_keys.map(function(k) {
+          const revoked = k.revoked_at ? ' (revoked)' : '';
+          return `
+            <div class="item" style="font-size:13px;">
+              <strong>${escapeHtml(k.name)}</strong> — ${escapeHtml(k.key_prefix)}...${revoked}
+              ${!k.revoked_at ? '<button class="btn-danger" onclick="revokeKey(' + k.id + ')">Revoke</button>' : ''}
+            </div>
+          `;
+        }).join("")
+      : "<p style='color:#94a3b8;'>No API keys yet.</p>";
+  } catch (e) {
+    document.getElementById("platformStatus").textContent = "Error loading dashboard.";
+  }
+}
+
+async function installPlugin(pluginKey) {
+  const headers = authHeaders();
+  if (!headers) return;
+  const res = await fetch("/api/plugins/install", {
+    method: "POST",
+    headers: headers,
+    body: JSON.stringify({ plugin_key: pluginKey })
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    showToast(data.detail || "Install failed.");
+    return;
+  }
+  loadDashboard();
+}
+
+async function togglePlugin(id, enabled) {
+  const headers = authHeaders();
+  if (!headers) return;
+  const res = await fetch("/api/plugins/" + id + "/toggle", {
+    method: "PUT",
+    headers: headers,
+    body: JSON.stringify({ enabled: enabled })
+  });
+  if (!res.ok) {
+    showToast("Toggle failed.");
+    return;
+  }
+  loadDashboard();
+}
+
+async function uninstallPlugin(id) {
+  const headers = authHeaders();
+  if (!headers) return;
+  const res = await fetch("/api/plugins/" + id, { method: "DELETE", headers: headers });
+  if (!res.ok) {
+    showToast("Remove failed.");
+    return;
+  }
+  loadDashboard();
+}
+
+async function runPlugin(id) {
+  const headers = authHeaders();
+  if (!headers) return;
+  const res = await fetch("/api/plugins/" + id + "/execute", {
+    method: "POST",
+    headers: headers,
+    body: JSON.stringify({})
+  });
+  const data = await res.json();
+  showToast(JSON.stringify(data, null, 2));
+  loadDashboard();
+}
+
+async function editSettings(id) {
+  const headers = authHeaders();
+  if (!headers) return;
+  const res = await fetch("/api/plugins/" + id + "/settings", { headers: headers });
+  const data = await res.json();
+  const current = JSON.stringify(data.settings || {}, null, 2);
+  const updated = await auraPrompt(
+    "Plugin settings (JSON):",
+    current,
+    { title: "Plugin Settings", multiline: true }
+  );
+  if (updated === null) return;
+  try {
+    const settings = JSON.parse(updated);
+    const saveRes = await fetch("/api/plugins/" + id + "/settings", {
+      method: "PUT",
+      headers: headers,
+      body: JSON.stringify({ settings: settings })
+    });
+    if (!saveRes.ok) {
+      showToast("Save failed.");
+      return;
+    }
+    loadDashboard();
+  } catch (e) {
+    showToast("Invalid JSON.");
+  }
+}
+
+async function createApiKey() {
+  const headers = authHeaders();
+  if (!headers) return;
+  const name = document.getElementById("apiKeyName").value.trim();
+  if (!name) return showToast("Enter a key name.");
+  const res = await fetch("/api/plugins/api-keys", {
+    method: "POST",
+    headers: headers,
+    body: JSON.stringify({ name: name })
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    showToast(data.detail || "Failed to create key.");
+    return;
+  }
+  showToast("Save this key now (shown once):\n\n" + data.key);
+  document.getElementById("apiKeyName").value = "";
+  loadDashboard();
+}
+
+async function revokeKey(id) {
+  const headers = authHeaders();
+  if (!headers) return;
+  const res = await fetch("/api/plugins/api-keys/" + id, {
+    method: "DELETE",
+    headers: headers
+  });
+  if (!res.ok) {
+    showToast("Revoke failed.");
+    return;
+  }
+  loadDashboard();
+}
+
+loadDashboard();
+</script>
+</body>
+</html>

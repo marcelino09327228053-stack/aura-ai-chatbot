@@ -1,5 +1,16 @@
 venv/
+.venv/
 __pycache__/
+*.py[cod]
 .env
+.env.facebook
 key.json
 static/*.mp3
+*.db
+*.db-*
+*.log
+_edge_*/
+_photo_studio_assets/
+_photo_studio.html
+_resume_page_edit.html
+_modern_reference.png

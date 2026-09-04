@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MB Future Tech — AI Chatbot | My Account</title>
+<style>
+:root{--bg:#050807;--panel:#0d1814;--line:#244438;--accent:#3cc68a;--muted:#96aea4}
+*{box-sizing:border-box} body{margin:0;min-height:100vh;padding:28px;background:radial-gradient(circle at 50% 0,#163429,transparent 38%),var(--bg);color:#f4fff9;font:15px/1.5 Arial}
+.wrap{max-width:720px;margin:auto}.header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}.card{background:rgba(13,24,20,.95);border:1px solid var(--line);border-radius:18px;padding:22px;box-shadow:0 24px 80px #0008}
+.avatar{width:86px;height:86px;border-radius:50%;display:grid;place-items:center;background:#173c30 center/cover no-repeat;border:2px solid var(--accent);font-size:30px;margin-bottom:10px;overflow:hidden}
+label{display:block;margin:16px 0 6px;color:var(--muted)}input{width:100%;padding:12px;border-radius:9px;border:1px solid var(--line);background:#09110e;color:white}
+button,.btn{display:inline-block;margin-top:18px;padding:11px 15px;border:0;border-radius:9px;background:var(--accent);color:#032016;font-weight:800;text-decoration:none;cursor:pointer}.secondary{margin:0;background:#182b24;color:white}.meta{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:20px}.meta div{padding:13px;background:#09110e;border:1px solid var(--line);border-radius:10px}.muted{color:var(--muted);font-size:12px}
+</style>
+<script src="/static/aura-notifications.js"></script>
+</head>
+<body><main class="wrap">
+<header class="header"><div><h1 style="margin:0">My Account</h1><span style="color:var(--muted)">Your personal AI Chatbot profile</span></div><a href="/" class="btn secondary">Back to AI Chatbot</a></header>
+<section class="card">
+  <div class="avatar" id="avatar">A</div>
+  <input id="photoInput" type="file" accept="image/png,image/jpeg,image/webp" style="display:none" onchange="uploadPhoto()">
+  <button class="secondary" style="margin:0 0 8px" onclick="document.getElementById('photoInput').click()">Change profile picture</button>
+  <label for="fullName">Full name</label><input id="fullName" maxlength="100" placeholder="Enter your name">
+  <label for="email">Email address</label><input id="email" disabled>
+  <button class="secondary" style="margin-top:10px" onclick="showEmailChange()">Change email securely</button>
+  <div id="emailChange" style="display:none;margin-top:14px;padding:14px;border:1px solid var(--line);border-radius:12px;background:#09110e">
+    <label for="newEmail" style="margin-top:0">New email</label><input id="newEmail" type="email" placeholder="new@email.com">
+    <button onclick="requestEmailCode()">Send confirmation code</button>
+    <div id="codeArea" style="display:none">
+      <label for="emailCode">6-digit confirmation code</label><input id="emailCode" inputmode="numeric" maxlength="6">
+      <div id="developmentCode" class="muted" style="margin-top:7px"></div>
+      <button onclick="verifyEmailCode()">Verify and change email</button>
+    </div>
+  </div>
+  <div class="meta"><div><span class="muted">Account ID</span><br><strong id="accountId">—</strong></div><div><span class="muted">Date joined</span><br><strong id="joined">—</strong></div></div>
+  <button onclick="saveAccount()">Save changes</button>
+  <div style="margin-top:22px;padding-top:18px;border-top:1px solid var(--line)">
+    <strong>Current session</strong>
+    <p class="muted">This browser is currently signed in to MB Future Tech AI Chatbot.</p>
+    <button class="secondary" onclick="logout()">Sign out of this device</button>
+  </div>
+</section>
+</main>
+<script>
+function headers(){const token=localStorage.getItem("aura_token");if(!token){location.href="/login";return null}return{"Content-Type":"application/json","Authorization":"Bearer "+token}}
+async function load(){const res=await fetch("/auth/me",{headers:headers()});if(!res.ok){location.href="/login";return}const data=await res.json(),u=data.user;document.getElementById("fullName").value=u.full_name||"";document.getElementById("email").value=u.email;document.getElementById("accountId").textContent=u.id;document.getElementById("joined").textContent=new Date(u.created_at).toLocaleDateString();const avatar=document.getElementById("avatar");avatar.textContent=(u.full_name||u.email||"A").trim().charAt(0).toUpperCase();if(u.profile_image){avatar.style.backgroundImage=`url("${u.profile_image}")`;avatar.textContent=""}}
+async function saveAccount(){const res=await fetch("/auth/account",{method:"PUT",headers:headers(),body:JSON.stringify({full_name:document.getElementById("fullName").value})});const data=await res.json();if(!res.ok){showToast(data.detail||"Could not save account.");return}showToast("Account updated.");load()}
+async function uploadPhoto(){const file=document.getElementById("photoInput").files[0];if(!file)return;const form=new FormData();form.append("photo",file);const token=localStorage.getItem("aura_token");const res=await fetch("/auth/account/photo",{method:"POST",headers:{"Authorization":"Bearer "+token},body:form});const data=await res.json();if(!res.ok){showToast(data.detail||"Upload failed.");return}await load()}
+function showEmailChange(){const box=document.getElementById("emailChange");box.style.display=box.style.display==="none"?"block":"none"}
+async function requestEmailCode(){const newEmail=document.getElementById("newEmail").value.trim();const res=await fetch("/auth/account/email/request",{method:"POST",headers:headers(),body:JSON.stringify({new_email:newEmail})});const data=await res.json();if(!res.ok){showToast(data.detail||"Could not send code.");return}document.getElementById("codeArea").style.display="block";document.getElementById("developmentCode").textContent=data.development_code?`Development code: ${data.development_code}`:"Check your new email for the code."}
+async function verifyEmailCode(){const res=await fetch("/auth/account/email/verify",{method:"POST",headers:headers(),body:JSON.stringify({new_email:document.getElementById("newEmail").value.trim(),code:document.getElementById("emailCode").value.trim()})});const data=await res.json();if(!res.ok){showToast(data.detail||"Verification failed.");return}showToast("Email changed successfully.");document.getElementById("emailChange").style.display="none";await load()}
+function logout(){localStorage.removeItem("aura_token");localStorage.removeItem("aura_company_id");localStorage.removeItem("aura_session_id");location.href="/login"}
+load();
+</script></body></html>

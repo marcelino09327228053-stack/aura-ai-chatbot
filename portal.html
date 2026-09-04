@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>MB Future Tech — AI Chatbot | Customer Portal</title>
+<style>
+* { box-sizing: border-box; }
+body { font-family: Arial; background: #0f172a; color: white; margin: 0; padding: 20px; }
+.header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+.card { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 20px; margin-bottom: 16px; }
+button, .btn { padding: 10px 14px; border: none; border-radius: 8px; background: #3b82f6; color: white; cursor: pointer; font-weight: bold; text-decoration: none; display: inline-block; margin-right: 8px; margin-bottom: 8px; }
+.btn-secondary { background: #334155; }
+.widgets { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; }
+.widget { background: #334155; border-radius: 8px; padding: 16px; text-align: center; }
+.widget-value { font-size: 22px; font-weight: bold; margin-top: 8px; }
+.item { background: #334155; border-radius: 8px; padding: 12px; margin-bottom: 8px; font-size: 13px; }
+input, textarea { padding: 10px; border: none; border-radius: 8px; background: #0f172a; color: white; width: 100%; margin-bottom: 8px; }
+</style>
+<script src="/static/aura-notifications.js"></script>
+</head>
+<body>
+<div class="header">
+  <h1>☁️ MB Future Tech AI Cloud Portal</h1>
+  <div>
+    <a href="/dashboard" class="btn btn-secondary">Dashboard</a>
+    <a href="/subscription" class="btn btn-secondary">Subscription</a>
+    <button class="btn-secondary" onclick="logout()">Logout</button>
+  </div>
+</div>
+
+<div class="card">
+  <h2 style="margin-top:0;">Account</h2>
+  <div id="accountInfo" style="color:#94a3b8;">Loading...</div>
+</div>
+
+<div class="card">
+  <h2 style="margin-top:0;">Analytics</h2>
+  <div class="widgets" id="analyticsGrid"></div>
+</div>
+
+<div class="card">
+  <h2 style="margin-top:0;">Subscription & Billing</h2>
+  <div id="billingInfo"></div>
+  <button onclick="startTrial()">Start 14-day Pro Trial</button>
+  <button class="btn-secondary" onclick="subscribe('pro','monthly')">Subscribe Pro Monthly</button>
+  <button class="btn-secondary" onclick="subscribe('pro','annual')">Subscribe Pro Annual</button>
+</div>
+
+<div class="card">
+  <h2 style="margin-top:0;">API Keys</h2>
+  <p style="color:#94a3b8;font-size:13px;">Use <code>X-API-Key</code> for <code>/api/v1/*</code> developer API.</p>
+  <input id="keyName" placeholder="Key name">
+  <button onclick="createKey()">Create API Key</button>
+  <div id="keyList" style="margin-top:12px;"></div>
+</div>
+
+<div class="card">
+  <h2 style="margin-top:0;">White-Label Branding</h2>
+  <input id="brandName" placeholder="Brand name">
+  <input id="logoUrl" placeholder="Logo URL">
+  <input id="customDomain" placeholder="Custom domain (e.g. chat.yourcompany.com)">
+  <button onclick="saveBranding()">Save Branding</button>
+</div>
+
+<div class="card">
+  <h2 style="margin-top:0;">Marketplace Extensions</h2>
+  <div id="marketplaceList"></div>
+</div>
+
+<script>
+function authHeaders() {
+  const token = localStorage.getItem("aura_token");
+  if (!token) { window.location.href = "/login"; return null; }
+  return { "Content-Type": "application/json", "Authorization": "Bearer " + token };
+}
+
+function escapeHtml(t) {
+  return String(t).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+}
+
+function logout() {
+  localStorage.removeItem("aura_token");
+  window.location.href = "/login";
+}
+
+async function loadPortal() {
+  const headers = authHeaders();
+  if (!headers) return;
+  const res = await fetch("/cloud/portal", { headers });
+  if (!res.ok) { document.getElementById("accountInfo").textContent = "Failed to load."; return; }
+  const data = await res.json();
+
+  document.getElementById("accountInfo").innerHTML =
+    "<strong>" + escapeHtml(data.user.email) + "</strong><br>" +
+    "Company: " + escapeHtml(data.company.company_name);
+
+  const a = data.analytics;
+  document.getElementById("analyticsGrid").innerHTML = `
+    <div class="widget"><div style="color:#94a3b8;font-size:13px;">AI Messages Today</div><div class="widget-value">${a.ai_usage.messages_today}</div></div>
+    <div class="widget"><div style="color:#94a3b8;font-size:13px;">Customers</div><div class="widget-value">${a.customer_growth.total_customers}</div></div>
+    <div class="widget"><div style="color:#94a3b8;font-size:13px;">Revenue</div><div class="widget-value">${a.revenue.total_revenue}</div></div>
+    <div class="widget"><div style="color:#94a3b8;font-size:13px;">Response Ratio</div><div class="widget-value">${a.responses.assistant_ratio}%</div></div>
+  `;
+
+  const b = data.billing;
+  document.getElementById("billingInfo").innerHTML =
+    "Plan: <strong>" + escapeHtml((b.subscription && b.subscription.plan) || "free") + "</strong>" +
+    (b.trial ? " | Trial expires: " + escapeHtml(b.trial.expires_at) : "");
+
+  document.getElementById("keyList").innerHTML = data.api_keys.map(function(k) {
+    return `<div class="item">${escapeHtml(k.name)} — ${escapeHtml(k.key_prefix)}... [${escapeHtml(k.scopes)}]</div>`;
+  }).join("") || "<p style='color:#94a3b8;'>No API keys.</p>";
+
+  const brand = data.branding;
+  document.getElementById("brandName").value = brand.brand_name || "";
+  document.getElementById("logoUrl").value = brand.logo_url || "";
+  document.getElementById("customDomain").value = brand.custom_domain || "";
+
+  const mRes = await fetch("/cloud/portal/marketplace", { headers });
+  if (mRes.ok) {
+    const items = await mRes.json();
+    document.getElementById("marketplaceList").innerHTML = items.map(function(ext) {
+      return `<div class="item"><strong>${escapeHtml(ext.name)}</strong> v${escapeHtml(ext.latest_version || ext.version)}
+        — ★ ${ext.avg_rating} (${ext.review_count} reviews)</div>`;
+    }).join("");
+  }
+}
+
+async function createKey() {
+  const headers = authHeaders();
+  if (!headers) return;
+  const name = document.getElementById("keyName").value.trim();
+  if (!name) return showToast("Enter key name.");
+  const res = await fetch("/cloud/portal/api-keys", {
+    method: "POST", headers, body: JSON.stringify({ name: name })
+  });
+  const data = await res.json();
+  if (!res.ok) { showToast(data.detail || "Failed."); return; }
+  showToast("Save this key (shown once):\n\n" + data.key);
+  loadPortal();
+}
+
+async function subscribe(plan, cycle) {
+  const headers = authHeaders();
+  if (!headers) return;
+  const res = await fetch("/cloud/portal/subscribe", {
+    method: "POST", headers, body: JSON.stringify({ plan, cycle })
+  });
+  const data = await res.json();
+  if (!res.ok) { showToast(data.detail || "Failed."); return; }
+  showToast("Subscribed!");
+  loadPortal();
+}
+
+async function startTrial() {
+  await subscribe("pro", "trial");
+}
+
+async function saveBranding() {
+  const headers = authHeaders();
+  if (!headers) return;
+  const res = await fetch("/cloud/portal/branding", {
+    method: "PUT", headers,
+    body: JSON.stringify({
+      brand_name: document.getElementById("brandName").value,
+      logo_url: document.getElementById("logoUrl").value,
+      custom_domain: document.getElementById("customDomain").value,
+      theme: { primary: "#3b82f6" }
+    })
+  });
+  if (!res.ok) { showToast("Save failed."); return; }
+  showToast("Branding saved.");
+}
+
+loadPortal();
+</script>
+</body>
+</html>

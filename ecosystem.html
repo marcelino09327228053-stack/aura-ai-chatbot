@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MB Future Tech — AI Chatbot | Autonomous Ecosystem</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, sans-serif; background: #060810; color: #e2e8f0; min-height: 100vh; }
+    header {
+      background: linear-gradient(135deg, #312e81 0%, #581c87 40%, #1e1b4b 100%);
+      padding: 1.25rem 2rem; display: flex; align-items: center;
+      border-bottom: 1px solid #4c1d95;
+    }
+    header h1 { font-size: 1.4rem; font-weight: 700; flex: 1; }
+    header small { display: block; opacity: .7; font-size: .8rem; }
+    .header-nav a { color: #c4b5fd; font-size: .85rem; text-decoration: none; margin-left: 1rem; }
+    .header-nav a:hover { color: #fff; }
+    main { max-width: 1280px; margin: 1.5rem auto; padding: 0 1.5rem; }
+    .tabs { display: flex; gap: .4rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+    .tab-btn { padding: .45rem 1rem; border-radius: 6px; border: 1px solid #4c1d95;
+      background: #12101f; color: #c4b5fd; cursor: pointer; font-size: .85rem; }
+    .tab-btn.active { background: #7c3aed; color: #fff; border-color: #7c3aed; }
+    .tab-panel { display: none; } .tab-panel.active { display: block; }
+    .grid { display: grid; gap: 1rem; }
+    .grid-2 { grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
+    .grid-3 { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
+    .card { background: #12101f; border: 1px solid #4c1d95; border-radius: 10px; padding: 1.25rem; }
+    .card h3 { font-size: .95rem; font-weight: 600; margin-bottom: .75rem; color: #a78bfa; }
+    .kpi { text-align: center; }
+    .kpi .val { font-size: 1.5rem; font-weight: 700; color: #a78bfa; }
+    .kpi .lbl { font-size: .75rem; color: #64748b; margin-top: .2rem; }
+    .item { padding: .65rem 0; border-bottom: 1px solid #4c1d95; }
+    .item:last-child { border-bottom: none; }
+    .item-title { font-weight: 600; font-size: .875rem; }
+    .item-desc { font-size: .78rem; color: #94a3b8; }
+    .item-val { font-size: .8rem; color: #a78bfa; margin-top: .15rem; }
+    .form-row { display: flex; flex-wrap: wrap; gap: .6rem; margin-bottom: .75rem; }
+    .form-group { display: flex; flex-direction: column; gap: .3rem; flex: 1; min-width: 140px; }
+    .form-group label { font-size: .78rem; color: #c4b5fd; }
+    .form-group input, .form-group select, .form-group textarea {
+      background: #060810; border: 1px solid #4c1d95; color: #e2e8f0;
+      border-radius: 6px; padding: .45rem .7rem; font-size: .84rem;
+    }
+    .btn { display: inline-flex; padding: .45rem 1rem; border-radius: 6px; border: none;
+      font-size: .84rem; font-weight: 600; cursor: pointer; }
+    .btn-primary { background: #7c3aed; color: #fff; }
+    .btn-sm { padding: .3rem .7rem; font-size: .78rem; }
+    .btn-outline { background: transparent; border: 1px solid #4c1d95; color: #c4b5fd; }
+    .badge { display: inline-block; padding: .15rem .5rem; border-radius: 999px; font-size: .7rem; font-weight: 700; }
+    .badge-purple { background: #4c1d95; color: #c4b5fd; }
+    .badge-high { background: #7f1d1d; color: #fca5a5; }
+    .badge-medium { background: #78350f; color: #fcd34d; }
+    .badge-low { background: #14532d; color: #86efac; }
+    .result-box { margin-top: .75rem; background: #060810; border: 1px solid #4c1d95; border-radius: 8px; padding: 1rem; }
+    .result-row { display: flex; justify-content: space-between; padding: .3rem 0; border-bottom: 1px solid #12101f; font-size: .83rem; }
+    .result-row:last-child { border-bottom: none; }
+    .result-val { color: #a78bfa; font-weight: 600; }
+    .loading { color: #475569; font-style: italic; font-size: .84rem; }
+    .error { color: #f87171; font-size: .83rem; }
+    .success { color: #22c55e; font-size: .83rem; }
+    .agent-chip { display: inline-block; margin: .2rem; padding: .35rem .7rem; background: #1e1b4b;
+      border: 1px solid #4c1d95; border-radius: 8px; font-size: .78rem; }
+  </style>
+</head>
+<body>
+<header>
+  <div style="flex:1">
+    <h1>🧬 MB Future Tech Autonomous Ecosystem</h1>
+    <small>Research · Innovation · Simulations · Automation · Intelligence Hub</small>
+  </div>
+  <nav class="header-nav">
+    <a href="/dashboard">Dashboard</a>
+    <a href="/commerce">Commerce</a>
+    <a href="/corporation">Corporation</a>
+  </nav>
+</header>
+<main>
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('status')">Status</button>
+    <button class="tab-btn" onclick="switchTab('research')">Research</button>
+    <button class="tab-btn" onclick="switchTab('innovations')">Innovations</button>
+    <button class="tab-btn" onclick="switchTab('simulate')">Simulations</button>
+    <button class="tab-btn" onclick="switchTab('automation')">Automation</button>
+    <button class="tab-btn" onclick="switchTab('intelligence')">Intelligence</button>
+  </div>
+
+  <div class="tab-panel active" id="tab-status">
+    <div class="grid grid-3" id="statusKPIs" style="margin-bottom:1rem">
+      <div class="card kpi"><div class="val loading">…</div><div class="lbl">Agents</div></div>
+      <div class="card kpi"><div class="val loading">…</div><div class="lbl">Health</div></div>
+      <div class="card kpi"><div class="val loading">…</div><div class="lbl">Unread Alerts</div></div>
+    </div>
+    <div class="grid grid-2">
+      <div class="card"><h3>Modules</h3><div id="modulesStatus"><p class="loading">Loading…</p></div></div>
+      <div class="card"><h3>Coordinated Decisions</h3><div id="decisions"><p class="loading">Loading…</p></div></div>
+      <div class="card"><h3>Notifications</h3><div id="notifications"><p class="loading">Loading…</p></div></div>
+      <div class="card"><h3>Recent Activity</h3><div id="activity"><p class="loading">Loading…</p></div></div>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="tab-research">
+    <div class="card" style="margin-bottom:1rem">
+      <div class="form-row">
+        <div class="form-group"><label>Sector</label>
+          <select id="researchSector">
+            <option value="general">General</option><option value="retail">Retail</option>
+            <option value="technology">Technology</option><option value="services">Services</option>
+          </select>
+        </div>
+      </div>
+      <button class="btn btn-primary" onclick="runResearch()">Run Research</button>
+    </div>
+    <div class="grid grid-2" id="researchResult"><p class="loading">Click Run Research.</p></div>
+  </div>
+
+  <div class="tab-panel" id="tab-innovations">
+    <div class="card" style="margin-bottom:1rem">
+      <button class="btn btn-primary" onclick="runInnovations()">Generate Innovations</button>
+    </div>
+    <div class="grid grid-2" id="innovationsResult"><p class="loading">Click Generate Innovations.</p></div>
+  </div>
+
+  <div class="tab-panel" id="tab-simulate">
+    <div class="grid grid-2">
+      <div class="card">
+        <h3>Run Simulation</h3>
+        <div class="form-group" style="margin-bottom:.75rem"><label>Scenario</label>
+          <select id="simType" onchange="updateSimParams()">
+            <option value="business">Business</option>
+            <option value="expansion">Expansion</option>
+            <option value="financial">Financial Projections</option>
+            <option value="risk">Risk Stress Test</option>
+          </select>
+        </div>
+        <div id="simParams"></div>
+        <button class="btn btn-primary" onclick="runSimulate()">Simulate</button>
+        <div id="simResult"></div>
+      </div>
+      <div class="card">
+        <h3>Past Simulations</h3>
+        <div id="simHistory"><p class="loading">Loading…</p></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="tab-automation">
+    <div class="grid grid-2">
+      <div class="card">
+        <h3>Automation Suite</h3>
+        <p class="item-desc" style="margin-bottom:.75rem">Runs reporting, task delegation, workflow optimization, and smart notifications.</p>
+        <button class="btn btn-primary" onclick="runAutomation()">Run Full Suite</button>
+        <div id="autoResult"></div>
+      </div>
+      <div class="card">
+        <h3>Automation Jobs</h3>
+        <div id="jobList"><p class="loading">Loading…</p></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="tab-intelligence">
+    <div class="grid grid-2">
+      <div class="card">
+        <h3>Connect Agents</h3>
+        <button class="btn btn-primary btn-sm" onclick="connectAgents()">Connect All Agents</button>
+        <div id="agentList" style="margin-top:.75rem"></div>
+      </div>
+      <div class="card">
+        <h3>Share Knowledge</h3>
+        <div class="form-row">
+          <div class="form-group"><label>Source Agent</label><input id="knowAgent" value="research" /></div>
+          <div class="form-group"><label>Topic</label><input id="knowTopic" /></div>
+        </div>
+        <div class="form-group" style="margin-bottom:.5rem"><label>Content</label><textarea id="knowContent" rows="2"></textarea></div>
+        <button class="btn btn-primary btn-sm" onclick="shareKnowledge()">Share</button>
+        <div id="knowMsg"></div>
+      </div>
+      <div class="card">
+        <h3>Performance</h3>
+        <div id="perfMonitor"><p class="loading">Loading…</p></div>
+      </div>
+      <div class="card">
+        <h3>Shared Knowledge</h3>
+        <div id="knowList"><p class="loading">Loading…</p></div>
+      </div>
+    </div>
+  </div>
+</main>
+<script>
+const API = '';
+let TOKEN = localStorage.getItem('token') || '';
+async function api(path, method='GET', body=null) {
+  const opts = { method, headers: { 'Authorization': `Bearer ${TOKEN}`, 'Content-Type': 'application/json' } };
+  if (body) opts.body = JSON.stringify(body);
+  const r = await fetch(API + path, opts);
+  if (!r.ok) throw new Error((await r.json()).detail || r.statusText);
+  return r.json();
+}
+function fmt(n) { return typeof n === 'number' ? '₱' + n.toLocaleString(undefined,{maximumFractionDigits:2}) : (n ?? '—'); }
+function switchTab(name) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.getAttribute('onclick').includes(`'${name}'`)));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id === 'tab-' + name));
+}
+
+const SIM_PARAMS = {
+  business: [
+    { id: 'conversion_boost_pct', label: 'Conversion Boost %', def: 10 },
+    { id: 'price_increase_pct', label: 'Price Increase %', def: 5 },
+    { id: 'cost_cut_pct', label: 'Cost Cut %', def: 5 },
+  ],
+  expansion: [
+    { id: 'new_markets', label: 'New Markets', def: 1 },
+    { id: 'new_hires', label: 'New Hires', def: 2 },
+    { id: 'monthly_hire_cost', label: 'Cost per Hire', def: 25000 },
+    { id: 'revenue_per_market', label: 'Revenue per Market', def: 50000 },
+  ],
+  financial: [
+    { id: 'months', label: 'Months', def: 6 },
+    { id: 'monthly_growth_pct', label: 'Revenue Growth %/mo', def: 5 },
+    { id: 'expense_growth_pct', label: 'Expense Growth %/mo', def: 2 },
+  ],
+  risk: [
+    { id: 'revenue_drop_pct', label: 'Revenue Drop %', def: 20 },
+    { id: 'customer_churn_pct', label: 'Churn %', def: 15 },
+    { id: 'cost_spike_pct', label: 'Cost Spike %', def: 10 },
+  ],
+};
+
+function updateSimParams() {
+  const type = document.getElementById('simType').value;
+  document.getElementById('simParams').innerHTML = `<div class="form-row">${(SIM_PARAMS[type]||[]).map(f =>
+    `<div class="form-group"><label>${f.label}</label><input type="number" id="sp_${f.id}" value="${f.def}" /></div>`
+  ).join('')}</div>`;
+}
+
+async function loadStatus() {
+  try {
+    const [status, dash] = await Promise.all([
+      api('/ecosystem/status'),
+      api('/ecosystem/dashboard'),
+    ]);
+    const kpis = document.querySelectorAll('#statusKPIs .kpi');
+    kpis[0].querySelector('.val').textContent = status.agents?.agent_count ?? 0;
+    kpis[1].querySelector('.val').textContent = status.agents?.health ?? '—';
+    kpis[2].querySelector('.val').textContent = status.unread_notifications ?? 0;
+
+    document.getElementById('modulesStatus').innerHTML = Object.entries(status.modules||{}).map(([k,v]) =>
+      `<div class="result-row"><span>${k}</span><span class="result-val">${v}</span></div>`).join('');
+
+    const decisions = dash.coordinated_decisions?.decisions || [];
+    document.getElementById('decisions').innerHTML = decisions.map(d =>
+      `<div class="item"><div class="item-title">${d.decision}</div>
+      <div class="item-desc">Owners: ${(d.owners||[]).join(', ')} · conf ${(d.confidence*100).toFixed(0)}%</div></div>`
+    ).join('') || '<p class="loading">No decisions yet.</p>';
+
+    document.getElementById('notifications').innerHTML = (status.notifications||[]).map(n =>
+      `<div class="item"><div class="item-title"><span class="badge badge-${n.priority}">${n.priority}</span> ${n.title}</div>
+      <div class="item-desc">${n.message}</div></div>`
+    ).join('') || '<p class="loading">No alerts.</p>';
+
+    document.getElementById('activity').innerHTML = `
+      <div class="result-row"><span>Research items</span><span class="result-val">${status.research_count}</span></div>
+      <div class="result-row"><span>Innovations</span><span class="result-val">${status.innovation_count}</span></div>
+      <div class="result-row"><span>Simulations</span><span class="result-val">${status.recent_simulations}</span></div>
+      <div class="result-row"><span>Knowledge</span><span class="result-val">${status.knowledge_count}</span></div>`;
+  } catch(e) { console.error(e); }
+}
+
+async function runResearch() {
+  const sector = document.getElementById('researchSector').value;
+  document.getElementById('researchResult').innerHTML = '<p class="loading">Researching…</p>';
+  try {
+    const r = await api('/ecosystem/research?sector=' + sector);
+    document.getElementById('researchResult').innerHTML = `
+      <div class="card"><h3>Markets</h3><div class="item-desc">${r.markets?.summary||''}</div>
+        ${(r.markets?.findings?.segments||[]).slice(0,3).map(s=>`<div class="item"><div class="item-title">${s.segment}</div>
+        <div class="item-val">Fit ${s.fit_score} · barrier ${s.entry_barrier}</div></div>`).join('')}</div>
+      <div class="card"><h3>Competitors</h3><div class="item-desc">${r.competitors?.summary||''}</div>
+        <div class="result-row"><span>Position</span><span class="result-val">${r.competitors?.findings?.position}</span></div></div>
+      <div class="card"><h3>Opportunities</h3>
+        ${(r.opportunities?.findings?.opportunities||[]).map(o=>`<div class="item"><div class="item-title"><span class="badge badge-${o.priority}">${o.priority}</span> ${o.title}</div>
+        <div class="item-val">${fmt(o.value)}</div></div>`).join('')}</div>
+      <div class="card"><h3>Executive Summary</h3><div class="item-desc">${r.executive_summary||''}</div></div>`;
+    loadStatus();
+  } catch(e) { document.getElementById('researchResult').innerHTML = `<p class="error">${e.message}</p>`; }
+}
+
+async function runInnovations() {
+  document.getElementById('innovationsResult').innerHTML = '<p class="loading">Generating…</p>';
+  try {
+    const r = await api('/ecosystem/innovations');
+    let html = '';
+    for (const [cat, items] of Object.entries(r)) {
+      if (!Array.isArray(items) || cat === 'top_priorities') continue;
+      html += `<div class="card"><h3>${cat}</h3>${items.map(i=>
+        `<div class="item"><div class="item-title">${i.title}</div>
+        <div class="item-desc">${i.description}</div>
+        <div class="item-val">Impact ${(i.impact_score*100).toFixed(0)}% · Effort ${(i.effort_score*100).toFixed(0)}%</div></div>`
+      ).join('')}</div>`;
+    }
+    if (r.top_priorities) {
+      html += `<div class="card"><h3>Top Priorities</h3>${r.top_priorities.map(i=>
+        `<div class="item"><div class="item-title">${i.title}</div></div>`).join('')}</div>`;
+    }
+    document.getElementById('innovationsResult').innerHTML = html;
+    loadStatus();
+  } catch(e) { document.getElementById('innovationsResult').innerHTML = `<p class="error">${e.message}</p>`; }
+}
+
+async function runSimulate() {
+  const type = document.getElementById('simType').value;
+  const params = {};
+  (SIM_PARAMS[type]||[]).forEach(f => { params[f.id] = parseFloat(document.getElementById('sp_'+f.id).value)||0; });
+  try {
+    const r = await api('/ecosystem/simulate', 'POST', { scenario_type: type, params });
+    const res = r.result || {};
+    document.getElementById('simResult').innerHTML = `
+      <div class="result-box">
+        <div class="result-row"><span>Verdict</span><span class="result-val">${res.verdict||'—'}</span></div>
+        ${res.projected ? Object.entries(res.projected).map(([k,v])=>
+          `<div class="result-row"><span>${k.replace(/_/g,' ')}</span><span class="result-val">${typeof v==='number'?fmt(v):v}</span></div>`
+        ).join('') : ''}
+        ${res.severity ? `<div class="result-row"><span>Severity</span><span class="result-val">${res.severity}</span></div>` : ''}
+        ${res.cumulative_profit !== undefined ? `<div class="result-row"><span>Cumulative Profit</span><span class="result-val">${fmt(res.cumulative_profit)}</span></div>` : ''}
+      </div>`;
+    loadSimHistory();
+  } catch(e) { document.getElementById('simResult').innerHTML = `<p class="error">${e.message}</p>`; }
+}
+
+async function loadSimHistory() {
+  try {
+    const sims = await api('/ecosystem/simulations');
+    document.getElementById('simHistory').innerHTML = sims.map(s =>
+      `<div class="item"><div class="item-title">${s.scenario_type} <span class="badge badge-purple">${(s.confidence*100).toFixed(0)}%</span></div>
+      <div class="item-desc">${s.result?.verdict || '—'} · ${new Date(s.created_at).toLocaleString()}</div></div>`
+    ).join('') || '<p class="loading">No simulations yet.</p>';
+  } catch(e) {}
+}
+
+async function runAutomation() {
+  document.getElementById('autoResult').innerHTML = '<p class="loading">Running suite…</p>';
+  try {
+    const r = await api('/ecosystem/automation/run', 'POST', { suite: true });
+    document.getElementById('autoResult').innerHTML = `
+      <div class="result-box">
+        <div class="item"><div class="item-title">Reporting</div><div class="item-desc">${r.reporting?.result||''}</div></div>
+        <div class="item"><div class="item-title">Delegation</div><div class="item-desc">${r.delegation?.result||''}</div></div>
+        <div class="item"><div class="item-title">Workflows</div><div class="item-desc">${(r.workflows?.optimizations||[]).join(' · ')}</div></div>
+        <div class="item"><div class="item-title">Notifications</div><div class="item-desc">${(r.notifications||[]).length} alerts created</div></div>
+      </div>`;
+    loadJobs(); loadStatus();
+  } catch(e) { document.getElementById('autoResult').innerHTML = `<p class="error">${e.message}</p>`; }
+}
+
+async function loadJobs() {
+  try {
+    const jobs = await api('/ecosystem/automation/jobs');
+    document.getElementById('jobList').innerHTML = jobs.map(j =>
+      `<div class="item"><div class="item-title">${j.title} <span class="badge badge-purple">${j.status}</span></div>
+      <div class="item-desc">${j.result?.slice(0,100)||j.job_type}</div></div>`
+    ).join('') || '<p class="loading">No jobs yet.</p>';
+  } catch(e) {}
+}
+
+async function connectAgents() {
+  try {
+    const agents = await api('/ecosystem/intelligence/connect', 'POST');
+    document.getElementById('agentList').innerHTML = agents.map(a =>
+      `<span class="agent-chip">${a.agent_name} · ${(a.performance_score*100).toFixed(0)}%</span>`
+    ).join('');
+    loadPerf(); loadStatus();
+  } catch(e) {}
+}
+
+async function loadPerf() {
+  try {
+    const p = await api('/ecosystem/intelligence/performance');
+    document.getElementById('perfMonitor').innerHTML = `
+      <div class="result-row"><span>Health</span><span class="result-val">${p.health}</span></div>
+      <div class="result-row"><span>Avg Performance</span><span class="result-val">${(p.average_performance*100).toFixed(1)}%</span></div>
+      <div class="result-row"><span>Active</span><span class="result-val">${p.active_count}/${p.agent_count}</span></div>
+      ${(p.agents||[]).slice(0,6).map(a=>`<div class="item-desc">${a.agent_name}: ${(a.performance_score*100).toFixed(0)}%</div>`).join('')}`;
+  } catch(e) {}
+}
+
+async function shareKnowledge() {
+  const body = {
+    source_agent: document.getElementById('knowAgent').value,
+    topic: document.getElementById('knowTopic').value,
+    content: document.getElementById('knowContent').value,
+  };
+  if (!body.topic || !body.content) return;
+  try {
+    await api('/ecosystem/intelligence/knowledge', 'POST', body);
+    document.getElementById('knowMsg').innerHTML = '<span class="success">✓ Shared</span>';
+    loadKnowledge();
+  } catch(e) { document.getElementById('knowMsg').innerHTML = `<span class="error">${e.message}</span>`; }
+}
+
+async function loadKnowledge() {
+  try {
+    const items = await api('/ecosystem/intelligence/knowledge');
+    document.getElementById('knowList').innerHTML = items.map(k =>
+      `<div class="item"><div class="item-title">${k.topic} <span class="badge badge-purple">${k.source_agent}</span></div>
+      <div class="item-desc">${k.content?.slice(0,120)}</div></div>`
+    ).join('') || '<p class="loading">No shared knowledge yet.</p>';
+  } catch(e) {}
+}
+
+updateSimParams();
+if (!TOKEN) {
+  document.querySelectorAll('.loading').forEach(el => { el.textContent = 'Not logged in.'; });
+} else {
+  loadStatus(); loadSimHistory(); loadJobs(); loadPerf(); loadKnowledge();
+}
+</script>
+</body>
+</html>

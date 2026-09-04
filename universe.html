@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MB Future Tech — AI Chatbot | Universal Platform</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, sans-serif; background: #030712; color: #e2e8f0; min-height: 100vh; }
+    header {
+      background: linear-gradient(135deg, #0c4a6e 0%, #1e3a8a 50%, #0f172a 100%);
+      padding: 1.25rem 2rem; display: flex; align-items: center;
+      border-bottom: 1px solid #1e40af;
+    }
+    header h1 { font-size: 1.4rem; font-weight: 700; flex: 1; }
+    header small { display: block; opacity: .7; font-size: .8rem; }
+    .header-nav a { color: #93c5fd; font-size: .85rem; text-decoration: none; margin-left: 1rem; }
+    .header-nav a:hover { color: #fff; }
+    main { max-width: 1280px; margin: 1.5rem auto; padding: 0 1.5rem; }
+    .tabs { display: flex; gap: .4rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+    .tab-btn { padding: .45rem 1rem; border-radius: 6px; border: 1px solid #1e40af;
+      background: #0f172a; color: #93c5fd; cursor: pointer; font-size: .85rem; }
+    .tab-btn.active { background: #2563eb; color: #fff; border-color: #2563eb; }
+    .tab-panel { display: none; } .tab-panel.active { display: block; }
+    .grid { display: grid; gap: 1rem; }
+    .grid-2 { grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
+    .grid-3 { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
+    .card { background: #0f172a; border: 1px solid #1e40af; border-radius: 10px; padding: 1.25rem; }
+    .card h3 { font-size: .95rem; font-weight: 600; margin-bottom: .75rem; color: #60a5fa; }
+    .kpi { text-align: center; }
+    .kpi .val { font-size: 1.5rem; font-weight: 700; color: #60a5fa; }
+    .kpi .lbl { font-size: .75rem; color: #64748b; margin-top: .2rem; }
+    .item { padding: .65rem 0; border-bottom: 1px solid #1e3a8a; }
+    .item:last-child { border-bottom: none; }
+    .item-title { font-weight: 600; font-size: .875rem; }
+    .item-desc { font-size: .78rem; color: #94a3b8; }
+    .item-val { font-size: .8rem; color: #60a5fa; margin-top: .15rem; }
+    .form-row { display: flex; flex-wrap: wrap; gap: .6rem; margin-bottom: .75rem; }
+    .form-group { display: flex; flex-direction: column; gap: .3rem; flex: 1; min-width: 140px; }
+    .form-group label { font-size: .78rem; color: #93c5fd; }
+    .form-group input, .form-group select, .form-group textarea {
+      background: #030712; border: 1px solid #1e40af; color: #e2e8f0;
+      border-radius: 6px; padding: .45rem .7rem; font-size: .84rem;
+    }
+    .btn { display: inline-flex; padding: .45rem 1rem; border-radius: 6px; border: none;
+      font-size: .84rem; font-weight: 600; cursor: pointer; margin-right: .4rem; }
+    .btn-primary { background: #2563eb; color: #fff; }
+    .btn-sm { padding: .3rem .7rem; font-size: .78rem; }
+    .btn-outline { background: transparent; border: 1px solid #1e40af; color: #93c5fd; }
+    .badge { display: inline-block; padding: .15rem .5rem; border-radius: 999px; font-size: .7rem; font-weight: 700; }
+    .badge-active { background: #14532d; color: #86efac; }
+    .badge-pending { background: #78350f; color: #fcd34d; }
+    .result-box { margin-top: .75rem; background: #030712; border: 1px solid #1e40af; border-radius: 8px; padding: 1rem; }
+    .result-row { display: flex; justify-content: space-between; padding: .3rem 0; border-bottom: 1px solid #0f172a; font-size: .83rem; }
+    .result-row:last-child { border-bottom: none; }
+    .result-val { color: #60a5fa; font-weight: 600; }
+    .loading { color: #475569; font-style: italic; font-size: .84rem; }
+    .error { color: #f87171; font-size: .83rem; }
+    .success { color: #22c55e; font-size: .83rem; }
+    .agent-chip { display: inline-block; margin: .2rem; padding: .35rem .7rem; background: #1e3a8a;
+      border: 1px solid #2563eb; border-radius: 8px; font-size: .78rem; }
+  </style>
+</head>
+<body>
+<header>
+  <div style="flex:1">
+    <h1>🌌 MB Future Tech Universal Platform</h1>
+    <small>AI Core · Collaboration · Knowledge · Governance · Expansion</small>
+  </div>
+  <nav class="header-nav">
+    <a href="/dashboard">Dashboard</a>
+    <a href="/ecosystem">Ecosystem</a>
+    <a href="/commerce">Commerce</a>
+  </nav>
+</header>
+<main>
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('status')">Status</button>
+    <button class="tab-btn" onclick="switchTab('aicore')">AI Core</button>
+    <button class="tab-btn" onclick="switchTab('collab')">Collaboration</button>
+    <button class="tab-btn" onclick="switchTab('knowledge')">Knowledge</button>
+    <button class="tab-btn" onclick="switchTab('governance')">Governance</button>
+    <button class="tab-btn" onclick="switchTab('expansion')">Expansion</button>
+    <button class="tab-btn" onclick="switchTab('analytics')">Analytics</button>
+  </div>
+
+  <div class="tab-panel active" id="tab-status">
+    <div class="grid grid-3" id="statusKPIs" style="margin-bottom:1rem">
+      <div class="card kpi"><div class="val loading">…</div><div class="lbl">Memory Items</div></div>
+      <div class="card kpi"><div class="val loading">…</div><div class="lbl">Knowledge Entries</div></div>
+      <div class="card kpi"><div class="val loading">…</div><div class="lbl">Expansions</div></div>
+    </div>
+    <div class="grid grid-2">
+      <div class="card"><h3>Platform Modules</h3><div id="modulesStatus"><p class="loading">Loading…</p></div></div>
+      <div class="card"><h3>Governance</h3><div id="govSummary"><p class="loading">Loading…</p></div></div>
+      <div class="card"><h3>Collaboration</h3><div id="collabSummary"><p class="loading">Loading…</p></div></div>
+      <div class="card"><h3>Recent Decisions</h3><div id="decisions"><p class="loading">Loading…</p></div></div>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="tab-aicore">
+    <div class="grid grid-2">
+      <div class="card">
+        <h3>Unified AI Brain</h3>
+        <p class="item-desc" style="margin-bottom:.75rem">Initialize shared memory and cross-agent coordination.</p>
+        <button class="btn btn-primary btn-sm" onclick="initBrain()">Initialize Brain</button>
+        <button class="btn btn-outline btn-sm" onclick="runDecisions()">Run Decision Cycle</button>
+        <div id="brainResult" class="result-box" style="display:none"></div>
+      </div>
+      <div class="card">
+        <h3>Shared Memory</h3>
+        <div id="memoryList"><p class="loading">Loading…</p></div>
+      </div>
+      <div class="card">
+        <h3>Agent Coordination</h3>
+        <div id="coordList"><p class="loading">Loading…</p></div>
+      </div>
+      <div class="card">
+        <h3>Store Memory</h3>
+        <div class="form-row">
+          <div class="form-group"><label>Key</label><input id="memKey" placeholder="insight_key" /></div>
+          <div class="form-group"><label>Type</label>
+            <select id="memType"><option value="shared">Shared</option><option value="strategic">Strategic</option><option value="process">Process</option></select>
+          </div>
+        </div>
+        <div class="form-group" style="margin-bottom:.5rem"><label>Content</label><textarea id="memContent" rows="2"></textarea></div>
+        <button class="btn btn-primary btn-sm" onclick="storeMemory()">Save</button>
+        <div id="memMsg"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="tab-collab">
+    <div class="grid grid-2">
+      <div class="card">
+        <h3>Create Project</h3>
+        <div class="form-group" style="margin-bottom:.5rem"><label>Title</label><input id="projTitle" /></div>
+        <div class="form-group" style="margin-bottom:.5rem"><label>Description</label><textarea id="projDesc" rows="2"></textarea></div>
+        <div class="form-row">
+          <div class="form-group"><label>Type</label>
+            <select id="projType"><option value="team">Team</option><option value="company">Company</option></select>
+          </div>
+          <div class="form-group"><label>Members (comma-separated)</label><input id="projMembers" placeholder="sales,marketing" /></div>
+        </div>
+        <button class="btn btn-primary" onclick="createProject()">Create Project</button>
+        <div id="projMsg"></div>
+      </div>
+      <div class="card">
+        <h3>Team Projects</h3>
+        <div id="teamProjects"><p class="loading">Loading…</p></div>
+      </div>
+      <div class="card">
+        <h3>Company Collaborations</h3>
+        <div id="companyProjects"><p class="loading">Loading…</p></div>
+      </div>
+      <div class="card">
+        <h3>Shared Knowledge</h3>
+        <div id="sharedKnow"><p class="loading">Loading…</p></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="tab-knowledge">
+    <div class="card" style="margin-bottom:1rem">
+      <button class="btn btn-primary" onclick="runLearning()">Run Full Learning</button>
+      <button class="btn btn-outline" onclick="genSummary()">Generate Summary</button>
+      <div id="learnResult"></div>
+    </div>
+    <div class="grid grid-2">
+      <div class="card"><h3>Knowledge by Source</h3><div id="knowBySource"><p class="loading">Loading…</p></div></div>
+      <div class="card"><h3>Recent Entries</h3><div id="knowEntries"><p class="loading">Loading…</p></div></div>
+      <div class="card"><h3>Automatic Summaries</h3><div id="knowSummaries"><p class="loading">Loading…</p></div></div>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="tab-governance">
+    <div class="grid grid-2">
+      <div class="card"><h3>Policies</h3><div id="policies"><p class="loading">Loading…</p></div></div>
+      <div class="card"><h3>Security Rules</h3><div id="secRules"><p class="loading">Loading…</p></div></div>
+      <div class="card">
+        <h3>Submit Approval</h3>
+        <div class="form-row">
+          <div class="form-group"><label>Type</label><input id="apprType" value="expansion" /></div>
+          <div class="form-group"><label>Title</label><input id="apprTitle" /></div>
+        </div>
+        <div class="form-group" style="margin-bottom:.5rem"><label>Details</label><textarea id="apprDetails" rows="2"></textarea></div>
+        <button class="btn btn-primary btn-sm" onclick="submitApproval()">Submit</button>
+        <div id="apprMsg"></div>
+      </div>
+      <div class="card"><h3>Approvals</h3><div id="approvals"><p class="loading">Loading…</p></div></div>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="tab-expansion">
+    <div class="card" style="margin-bottom:1rem">
+      <h3>Plan Expansion</h3>
+      <div class="form-row">
+        <div class="form-group"><label>Type</label>
+          <select id="expType" onchange="updateExpForm()">
+            <option value="branch">New Branch</option>
+            <option value="company">New Company</option>
+            <option value="market">New Market</option>
+            <option value="deployment">Global Deployment</option>
+          </select>
+        </div>
+        <div class="form-group" id="expNameGroup"><label>Name</label><input id="expName" /></div>
+        <div class="form-group" id="expRegionGroup"><label>Region</label><input id="expRegion" value="PH" /></div>
+      </div>
+      <button class="btn btn-primary" onclick="runExpand()">Plan Expansion</button>
+      <div id="expResult"></div>
+    </div>
+    <div class="grid grid-2">
+      <div class="card"><h3>Branches</h3><div id="expBranches"><p class="loading">Loading…</p></div></div>
+      <div class="card"><h3>Markets & Deployments</h3><div id="expMarkets"><p class="loading">Loading…</p></div></div>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="tab-analytics">
+    <div class="grid grid-3" id="analyticsKPIs" style="margin-bottom:1rem">
+      <div class="card kpi"><div class="val loading">…</div><div class="lbl">Knowledge</div></div>
+      <div class="card kpi"><div class="val loading">…</div><div class="lbl">Coordination Links</div></div>
+      <div class="card kpi"><div class="val loading">…</div><div class="lbl">Audit Events</div></div>
+    </div>
+    <div class="grid grid-2">
+      <div class="card"><h3>Platform Analytics</h3><div id="analyticsDetail"><p class="loading">Loading…</p></div></div>
+      <div class="card"><h3>Recent Audit</h3><div id="auditLog"><p class="loading">Loading…</p></div></div>
+    </div>
+  </div>
+</main>
+<script>
+const API = '';
+let TOKEN = localStorage.getItem('token') || '';
+async function api(path, method='GET', body=null) {
+  const opts = { method, headers: { 'Authorization': `Bearer ${TOKEN}`, 'Content-Type': 'application/json' } };
+  if (body) opts.body = JSON.stringify(body);
+  const r = await fetch(API + path, opts);
+  if (!r.ok) throw new Error((await r.json()).detail || r.statusText);
+  return r.json();
+}
+function switchTab(name) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.getAttribute('onclick').includes(`'${name}'`)));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id === 'tab-' + name));
+}
+
+async function loadStatus() {
+  try {
+    const [status, dash] = await Promise.all([api('/universe/status'), api('/universe/dashboard')]);
+    const kpis = document.querySelectorAll('#statusKPIs .kpi');
+    kpis[0].querySelector('.val').textContent = status.ai_core?.brain?.memory_count ?? 0;
+    kpis[1].querySelector('.val').textContent = dash.knowledge?.total_entries ?? 0;
+    kpis[2].querySelector('.val').textContent = status.expansion?.total ?? 0;
+
+    document.getElementById('modulesStatus').innerHTML = Object.entries(status.modules||{}).map(([k,v]) =>
+      `<div class="result-row"><span>${k}</span><span class="result-val"><span class="badge badge-active">${v}</span></span></div>`).join('');
+
+    document.getElementById('govSummary').innerHTML = `
+      <div class="result-row"><span>Policies</span><span class="result-val">${status.governance?.policies??0}</span></div>
+      <div class="result-row"><span>Security Rules</span><span class="result-val">${status.governance?.security_rules??0}</span></div>
+      <div class="result-row"><span>Pending Approvals</span><span class="result-val">${status.governance?.pending_approvals??0}</span></div>`;
+
+    document.getElementById('collabSummary').innerHTML = `
+      <div class="result-row"><span>Team Projects</span><span class="result-val">${status.collaboration?.team??0}</span></div>
+      <div class="result-row"><span>Company Collabs</span><span class="result-val">${status.collaboration?.company??0}</span></div>
+      <div class="result-row"><span>Shared Knowledge</span><span class="result-val">${status.collaboration?.knowledge_items??0}</span></div>`;
+
+    const decisions = dash.decisions?.new_decisions || status.ai_core?.decisions?.recent || [];
+    document.getElementById('decisions').innerHTML = decisions.map(d =>
+      `<div class="item"><div class="item-title">${d.title||d.decision||'Decision'}</div>
+      <div class="item-desc">${d.rationale||''} · conf ${((d.confidence||0)*100).toFixed(0)}%</div></div>`
+    ).join('') || '<p class="loading">No decisions yet.</p>';
+  } catch(e) { console.error(e); }
+}
+
+async function loadAICore() {
+  try {
+    const core = await api('/universe/ai-core');
+    document.getElementById('memoryList').innerHTML = (core.brain?.agents||[]).slice(0,6).map(a =>
+      `<span class="agent-chip">${a.name}</span>`).join('') +
+      `<div class="item-desc" style="margin-top:.5rem">${core.brain?.memory_count||0} memory items · ${core.brain?.status}</div>`;
+    document.getElementById('coordList').innerHTML = (core.coordination?.links||[]).map(l =>
+      `<div class="item"><div class="item-title">${l.source_agent} → ${l.target_agent}</div>
+      <div class="item-desc">${l.task}</div></div>`).join('') || '<p class="loading">No links.</p>';
+  } catch(e) { console.error(e); }
+}
+
+async function initBrain() {
+  const el = document.getElementById('brainResult');
+  el.style.display = 'block';
+  el.innerHTML = '<p class="loading">Initializing…</p>';
+  try {
+    const r = await api('/universe/ai-core/initialize', 'POST');
+    el.innerHTML = `<p class="success">Brain initialized: ${r.agents} agents, ${r.coordination_links} links, ${r.memories?.length||0} memories</p>`;
+    loadAICore(); loadStatus();
+  } catch(e) { el.innerHTML = `<p class="error">${e.message}</p>`; }
+}
+
+async function runDecisions() {
+  const el = document.getElementById('brainResult');
+  el.style.display = 'block';
+  try {
+    const r = await api('/universe/ai-core/decisions', 'POST');
+    el.innerHTML = `<p class="success">Decision cycle complete: ${r.new_decisions?.length||0} new decisions</p>`;
+    loadStatus();
+  } catch(e) { el.innerHTML = `<p class="error">${e.message}</p>`; }
+}
+
+async function storeMemory() {
+  const el = document.getElementById('memMsg');
+  try {
+    await api('/universe/ai-core/memory', 'POST', {
+      memory_key: document.getElementById('memKey').value,
+      content: document.getElementById('memContent').value,
+      memory_type: document.getElementById('memType').value,
+    });
+    el.innerHTML = '<p class="success">Memory saved.</p>';
+    loadAICore();
+  } catch(e) { el.innerHTML = `<p class="error">${e.message}</p>`; }
+}
+
+async function loadCollab() {
+  try {
+    const c = await api('/universe/collaboration');
+    document.getElementById('teamProjects').innerHTML = (c.team_projects||[]).map(p =>
+      `<div class="item"><div class="item-title">${p.title}</div><div class="item-desc">${p.description}</div></div>`
+    ).join('') || '<p class="loading">No team projects.</p>';
+    document.getElementById('companyProjects').innerHTML = (c.company_collaborations||[]).map(p =>
+      `<div class="item"><div class="item-title">${p.title}</div><div class="item-desc">${p.description}</div></div>`
+    ).join('') || '<p class="loading">No company collaborations.</p>';
+    document.getElementById('sharedKnow').innerHTML = (c.shared_knowledge||[]).map(k =>
+      `<div class="item"><div class="item-title">${k.topic}</div><div class="item-desc">${(k.content||'').slice(0,100)}</div></div>`
+    ).join('') || '<p class="loading">No shared knowledge.</p>';
+  } catch(e) { console.error(e); }
+}
+
+async function createProject() {
+  const el = document.getElementById('projMsg');
+  try {
+    await api('/universe/collaboration/projects', 'POST', {
+      title: document.getElementById('projTitle').value,
+      description: document.getElementById('projDesc').value,
+      project_type: document.getElementById('projType').value,
+      members: document.getElementById('projMembers').value.split(',').map(s=>s.trim()).filter(Boolean),
+    });
+    el.innerHTML = '<p class="success">Project created.</p>';
+    loadCollab();
+  } catch(e) { el.innerHTML = `<p class="error">${e.message}</p>`; }
+}
+
+async function loadKnowledge() {
+  try {
+    const k = await api('/universe/knowledge');
+    document.getElementById('knowBySource').innerHTML = Object.entries(k.by_source||{}).map(([s,n]) =>
+      `<div class="result-row"><span>${s}</span><span class="result-val">${n}</span></div>`
+    ).join('') || '<p class="loading">No entries yet.</p>';
+    document.getElementById('knowEntries').innerHTML = (k.recent_entries||[]).map(e =>
+      `<div class="item"><div class="item-title">${e.title}</div><div class="item-desc">${(e.summary||e.content||'').slice(0,80)}</div></div>`
+    ).join('') || '<p class="loading">No entries.</p>';
+    document.getElementById('knowSummaries').innerHTML = (k.summaries||[]).map(s =>
+      `<div class="item"><div class="item-title">${s.title}</div><div class="item-desc">${(s.content||'').slice(0,120)}</div></div>`
+    ).join('') || '<p class="loading">No summaries.</p>';
+  } catch(e) { console.error(e); }
+}
+
+async function runLearning() {
+  const el = document.getElementById('learnResult');
+  el.innerHTML = '<p class="loading">Learning…</p>';
+  try {
+    const r = await api('/universe/knowledge/learn', 'POST');
+    el.innerHTML = `<p class="success">Learned: ${r.documents_learned} docs, ${r.faqs_learned} FAQs, ${r.customers_learned} customers</p>`;
+    loadKnowledge();
+  } catch(e) { el.innerHTML = `<p class="error">${e.message}</p>`; }
+}
+
+async function genSummary() {
+  const el = document.getElementById('learnResult');
+  try {
+    const r = await api('/universe/knowledge/summary?summary_type=daily', 'POST');
+    el.innerHTML = `<p class="success">Summary generated: ${r.title}</p>`;
+    loadKnowledge();
+  } catch(e) { el.innerHTML = `<p class="error">${e.message}</p>`; }
+}
+
+async function loadGovernance() {
+  try {
+    const g = await api('/universe/governance');
+    document.getElementById('policies').innerHTML = (g.policies||[]).map(p =>
+      `<div class="item"><div class="item-title">${p.title}</div><div class="item-desc">${(p.content||'').slice(0,100)}</div></div>`
+    ).join('') || '<p class="loading">No policies.</p>';
+    document.getElementById('secRules').innerHTML = (g.security_rules||[]).map(r =>
+      `<div class="item"><div class="item-title">${r.rule_name}</div><div class="item-desc">${r.rule_type}</div></div>`
+    ).join('') || '<p class="loading">No rules.</p>';
+    document.getElementById('approvals').innerHTML = (g.approvals?.recent||[]).map(a =>
+      `<div class="item"><div class="item-title">${a.title} <span class="badge badge-${a.status==='pending'?'pending':'active'}">${a.status}</span></div>
+      <div class="item-desc">${a.details||''}</div></div>`
+    ).join('') || '<p class="loading">No approvals.</p>';
+  } catch(e) { console.error(e); }
+}
+
+async function submitApproval() {
+  const el = document.getElementById('apprMsg');
+  try {
+    await api('/universe/governance/approvals', 'POST', {
+      approval_type: document.getElementById('apprType').value,
+      title: document.getElementById('apprTitle').value,
+      details: document.getElementById('apprDetails').value,
+    });
+    el.innerHTML = '<p class="success">Approval submitted.</p>';
+    loadGovernance();
+  } catch(e) { el.innerHTML = `<p class="error">${e.message}</p>`; }
+}
+
+function updateExpForm() {
+  const t = document.getElementById('expType').value;
+  document.getElementById('expNameGroup').style.display = t === 'deployment' ? 'none' : 'block';
+  document.getElementById('expRegionGroup').style.display = t === 'deployment' ? 'none' : 'block';
+}
+
+async function runExpand() {
+  const el = document.getElementById('expResult');
+  const type = document.getElementById('expType').value;
+  const params = type === 'market'
+    ? { market_code: document.getElementById('expRegion').value }
+    : type === 'deployment'
+    ? { profile: 'production' }
+    : { name: document.getElementById('expName').value, region: document.getElementById('expRegion').value };
+  el.innerHTML = '<p class="loading">Planning…</p>';
+  try {
+    const r = await api('/universe/expand', 'POST', { expansion_type: type, params });
+    el.innerHTML = `<p class="success">Planned: ${r.expansion?.name||type} (${r.status})</p>`;
+    loadExpansion();
+  } catch(e) { el.innerHTML = `<p class="error">${e.message}</p>`; }
+}
+
+async function loadExpansion() {
+  try {
+    const e = await api('/universe/expansion');
+    document.getElementById('expBranches').innerHTML = (e.branches||[]).map(b =>
+      `<div class="item"><div class="item-title">${b.name}</div><div class="item-desc">${b.region} · ${b.status}</div></div>`
+    ).join('') || '<p class="loading">No branches.</p>';
+    const markets = [...(e.markets||[]), ...(e.deployments||[])];
+    document.getElementById('expMarkets').innerHTML = markets.map(m =>
+      `<div class="item"><div class="item-title">${m.name}</div><div class="item-desc">${m.expansion_type} · ${m.status}</div></div>`
+    ).join('') || '<p class="loading">No markets or deployments.</p>';
+  } catch(e) { console.error(e); }
+}
+
+async function loadAnalytics() {
+  try {
+    const a = await api('/universe/analytics');
+    const kpis = document.querySelectorAll('#analyticsKPIs .kpi');
+    kpis[0].querySelector('.val').textContent = a.knowledge?.total_entries ?? 0;
+    kpis[1].querySelector('.val').textContent = a.ai_core?.coordination_links ?? 0;
+    kpis[2].querySelector('.val').textContent = a.audit_events ?? 0;
+
+    document.getElementById('analyticsDetail').innerHTML = `
+      <div class="result-row"><span>Knowledge by source</span><span class="result-val">${JSON.stringify(a.knowledge?.by_source||{})}</span></div>
+      <div class="result-row"><span>Pending decisions</span><span class="result-val">${a.ai_core?.pending_decisions??0}</span></div>
+      <div class="result-row"><span>Team projects</span><span class="result-val">${a.collaboration?.team??0}</span></div>
+      <div class="result-row"><span>Expansions</span><span class="result-val">${a.expansion?.total??0}</span></div>
+      <div class="result-row"><span>Policies</span><span class="result-val">${a.governance?.policies??0}</span></div>`;
+
+    document.getElementById('auditLog').innerHTML = (a.recent_audit||[]).map(ev =>
+      `<div class="item"><div class="item-title">${ev.action}</div><div class="item-desc">${ev.details||''} · ${ev.created_at||''}</div></div>`
+    ).join('') || '<p class="loading">No audit events.</p>';
+  } catch(e) { console.error(e); }
+}
+
+if (!TOKEN) { window.location.href = '/login'; }
+else {
+  loadStatus(); loadAICore(); loadCollab(); loadKnowledge();
+  loadGovernance(); loadExpansion(); loadAnalytics();
+}
+</script>
+</body>
+</html>

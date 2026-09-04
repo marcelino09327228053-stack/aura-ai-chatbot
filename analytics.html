@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Analytics & Reports | MB Future Tech AI</title>
+<style>
+*{box-sizing:border-box} :root{--bg:#07110d;--panel:#102019;--panel2:#14271f;--line:#294438;--text:#effbf5;--muted:#96ad9f;--accent:#74e6ad;--accent2:#3ab879;--warn:#f3c66f}
+body{margin:0;font-family:Inter,"Segoe UI",Arial,sans-serif;color:var(--text);background:radial-gradient(circle at 75% 0,rgba(70,220,145,.13),transparent 30%),linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px),var(--bg);background-size:auto,80px 80px,80px 80px,auto;min-height:100vh}
+.shell{max-width:1440px;margin:auto;padding:26px}.top{display:flex;align-items:center;justify-content:space-between;gap:18px;margin-bottom:24px}.brand{display:flex;align-items:center;gap:13px}.mark{width:48px;height:48px;border:1px solid var(--accent);border-radius:14px;display:grid;place-items:center;font-weight:900;color:var(--accent);box-shadow:0 0 24px rgba(116,230,173,.18)}h1{font-size:25px;margin:0}.sub{color:var(--muted);margin:5px 0 0;font-size:13px}.actions{display:flex;flex-wrap:wrap;gap:9px}.btn,button{border:1px solid var(--line);border-radius:11px;padding:10px 14px;background:var(--panel2);color:var(--text);font-weight:700;text-decoration:none;cursor:pointer}.btn.primary,button.primary{background:var(--accent2);border-color:var(--accent2);color:#04110a}.company-strip,.panel,.metric{background:rgba(16,32,25,.91);border:1px solid var(--line);border-radius:17px;box-shadow:0 18px 50px rgba(0,0,0,.18)}.company-strip{padding:15px 18px;display:flex;align-items:center;justify-content:space-between;gap:15px;margin-bottom:16px}.company-strip strong{display:block;font-size:17px}.company-strip span{color:var(--muted);font-size:12px}.metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:13px;margin-bottom:16px}.metric{padding:18px}.metric small{color:var(--muted);display:block}.metric b{display:block;font-size:29px;margin-top:8px}.metric em{font-style:normal;color:var(--accent);font-size:12px}.grid{display:grid;grid-template-columns:1.35fr .85fr;gap:16px}.panel{padding:20px;margin-bottom:16px}.panel h2{font-size:17px;margin:0 0 5px}.panel-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:17px}.hint{color:var(--muted);font-size:12px;line-height:1.45}.bars{display:grid;gap:13px}.bar-label{display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px}.bar-track{height:10px;background:#08130e;border:1px solid var(--line);border-radius:999px;overflow:hidden}.bar-fill{height:100%;background:linear-gradient(90deg,var(--accent2),var(--accent));border-radius:inherit}.channel,.recommendation{display:flex;gap:12px;padding:13px;border:1px solid var(--line);border-radius:13px;background:rgba(255,255,255,.02);margin-bottom:9px}.icon{width:36px;height:36px;display:grid;place-items:center;border-radius:10px;background:rgba(116,230,173,.1);color:var(--accent);font-weight:900;flex:none}.channel-copy,.recommendation-copy{flex:1;min-width:0}.channel strong,.recommendation strong{display:block;font-size:13px}.channel small,.recommendation small{color:var(--muted);font-size:11px}.status{font-size:11px;color:var(--muted);white-space:nowrap}.status.on{color:var(--accent)}.empty{padding:18px;border:1px dashed var(--line);border-radius:13px;color:var(--muted);font-size:13px;text-align:center}.loading{opacity:.55}.error{color:#ff9d9d}.footer-note{color:var(--muted);font-size:11px;text-align:center;padding:8px 0 20px}
+@media(max-width:900px){.metrics{grid-template-columns:repeat(2,1fr)}.grid{grid-template-columns:1fr}.top{align-items:flex-start;flex-direction:column}}
+@media(max-width:520px){.shell{padding:15px}.metrics{grid-template-columns:1fr 1fr}.metric{padding:14px}.metric b{font-size:23px}.actions{width:100%}.actions .btn,.actions button{flex:1;text-align:center}.company-strip{align-items:flex-start;flex-direction:column}}
+</style>
+</head>
+<body>
+<main class="shell">
+  <header class="top">
+    <div class="brand"><div class="mark">MB</div><div><h1>Analytics &amp; Reports</h1><p class="sub">Company-level activity, performance and business recommendations</p></div></div>
+    <div class="actions"><a class="btn" href="/">← Workspace</a><button onclick="loadReport()">Refresh</button><button class="primary" onclick="downloadReport('pdf')">Export PDF</button></div>
+  </header>
+  <section class="company-strip"><div><span>ACTIVE DASHBOARD</span><strong id="companyName">Loading company…</strong></div><span id="reportTime">Preparing report</span></section>
+  <section class="metrics">
+    <article class="metric"><small>Messages today</small><b id="messagesToday">—</b><em>AI activity</em></article>
+    <article class="metric"><small>Conversations</small><b id="conversationCount">—</b><em>Recent sessions</em></article>
+    <article class="metric"><small>Customers</small><b id="customerCount">—</b><em>CRM records</em></article>
+    <article class="metric"><small>Leads</small><b id="leadCount">—</b><em>Sales opportunities</em></article>
+  </section>
+  <div class="grid">
+    <div>
+      <section class="panel"><div class="panel-head"><div><h2>Business activity</h2><div class="hint">Live values belonging only to the selected dashboard</div></div></div><div id="activityBars" class="bars loading"><div class="empty">Loading activity…</div></div></section>
+      <section class="panel"><div class="panel-head"><div><h2>Customer topics</h2><div class="hint">Topic tracking will become more useful as this dashboard receives conversations.</div></div></div><div id="topics"><div class="empty">No analyzed topics yet. New conversations will provide the source for this report.</div></div></section>
+      <section class="panel"><div class="panel-head"><div><h2>Recommendations</h2><div class="hint">Practical next steps calculated from the current dashboard data</div></div></div><div id="recommendations"></div></section>
+    </div>
+    <aside>
+      <section class="panel"><div class="panel-head"><div><h2>Connected channels</h2><div class="hint">Each channel belongs to this dashboard</div></div></div><div id="channels"><div class="empty">Loading channels…</div></div></section>
+      <section class="panel"><div class="panel-head"><div><h2>AI performance</h2><div class="hint">Initial operational health view</div></div></div><div class="channel"><span class="icon">AI</span><span class="channel-copy"><strong>Assistant activity</strong><small id="aiPerformance">Waiting for usage data</small></span><span id="aiStatus" class="status">Checking</span></div><div class="channel"><span class="icon">↗</span><span class="channel-copy"><strong>Human handoff</strong><small>Detailed handoff analytics will appear after support activity.</small></span><span class="status">Planned</span></div></section>
+      <section class="panel"><h2>Exports</h2><p class="hint">Download the selected company’s report. Data from other dashboards is never included.</p><button style="width:100%;margin-top:8px" onclick="downloadReport('excel')">Export spreadsheet (CSV)</button></section>
+    </aside>
+  </div>
+  <div class="footer-note">Reports are isolated by dashboard. API keys, passwords and access tokens are never included.</div>
+</main>
+<script>
+function authHeaders(){const token=localStorage.getItem('aura_token');if(!token){location.href='/login';return null}return {'Content-Type':'application/json','Authorization':'Bearer '+token}}
+function num(value){return Number(value||0).toLocaleString()}
+function safe(value){return String(value||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+async function jsonFetch(url){const response=await fetch(url,{headers:authHeaders()});if(response.status===401){location.href='/login';throw new Error('Login required')}if(!response.ok)throw new Error('Unable to load '+url);return response.json()}
+function channel(icon,name,detail,state,on){return `<div class="channel"><span class="icon">${icon}</span><span class="channel-copy"><strong>${safe(name)}</strong><small>${safe(detail)}</small></span><span class="status ${on?'on':''}">${safe(state)}</span></div>`}
+function recommendation(icon,title,detail){return `<div class="recommendation"><span class="icon">${icon}</span><span class="recommendation-copy"><strong>${safe(title)}</strong><small>${safe(detail)}</small></span></div>`}
+function renderBars(items){const max=Math.max(1,...items.map(item=>Math.max(0,Number(item.value)||0)));document.getElementById('activityBars').classList.remove('loading');document.getElementById('activityBars').innerHTML=items.map(item=>`<div><div class="bar-label"><span>${safe(item.label)}</span><strong>${num(item.value)}</strong></div><div class="bar-track"><div class="bar-fill" style="width:${Math.max(item.value?8:0,Math.round((item.value/max)*100))}%"></div></div></div>`).join('')}
+async function loadReport(){
+  try{
+    const [me,kpis,customers,conversations,facebook]=await Promise.all([jsonFetch('/auth/me'),jsonFetch('/analytics/kpis'),jsonFetch('/analytics/customers'),jsonFetch('/conversations?limit=100'),jsonFetch('/webhooks/facebook/connection')]);
+    const company=me.company||{};document.getElementById('companyName').textContent=company.company_name||'Selected company';document.getElementById('reportTime').textContent='Updated '+new Date().toLocaleString();
+    document.getElementById('messagesToday').textContent=num(kpis.messages_today);document.getElementById('conversationCount').textContent=num(conversations.length);document.getElementById('customerCount').textContent=num(customers.total_customers);document.getElementById('leadCount').textContent=num(customers.total_leads);
+    renderBars([{label:'Messages today',value:kpis.messages_today},{label:'Recent conversations',value:conversations.length},{label:'Customers',value:customers.total_customers},{label:'Leads',value:customers.total_leads}]);
+    document.getElementById('channels').innerHTML=channel('W','Website chat','Workspace and embedded website conversations','Available',true)+channel('f','Facebook Messenger',facebook.connected?(facebook.page_name||'Connected Page'):'No Page connected',facebook.connected?'Connected':'Not connected',facebook.connected)+channel('◎','Instagram','Direct messages','Coming soon',false)+channel('♪','TikTok','Business messaging','Coming soon',false);
+    document.getElementById('aiPerformance').textContent=kpis.messages_today?`${num(kpis.messages_today)} message${kpis.messages_today===1?'':'s'} processed today`:'No messages processed today';document.getElementById('aiStatus').textContent='Operational';document.getElementById('aiStatus').classList.add('on');
+    const ideas=[];if(!facebook.connected)ideas.push(recommendation('f','Connect a Facebook Page','Add a Page to bring Messenger inquiries into this dashboard.'));if(!company.company_profile)ideas.push(recommendation('i','Complete the company profile','Add services, hours, policies and contact details to improve answer quality.'));if(customers.total_leads===0)ideas.push(recommendation('+','Start capturing leads','Ask interested customers for a name and contact method, then save them in CRM.'));if(conversations.length===0)ideas.push(recommendation('↗','Collect initial conversation data','Reports become more useful after customers begin messaging this business.'));if(!ideas.length)ideas.push(recommendation('✓','Dashboard data is active','Continue monitoring unanswered questions and customer intent each week.'));document.getElementById('recommendations').innerHTML=ideas.join('');
+  }catch(error){document.getElementById('activityBars').innerHTML=`<div class="empty error">${safe(error.message)}</div>`}
+}
+async function downloadReport(type){const url=type==='pdf'?'/reports/export/pdf':'/reports/export/excel';const response=await fetch(url,{headers:authHeaders()});if(!response.ok)return alert('Report export failed.');const blob=await response.blob();const link=document.createElement('a');link.href=URL.createObjectURL(blob);link.download=type==='pdf'?'mb-future-tech-report.pdf':'mb-future-tech-report.csv';link.click();setTimeout(()=>URL.revokeObjectURL(link.href),1000)}
+loadReport();
+</script>
+</body>
+</html>

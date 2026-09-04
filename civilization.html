@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MB Future Tech — AI Chatbot | Civilization Layer</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, sans-serif; background: #0a0f0a; color: #e2e8f0; min-height: 100vh; }
+    header {
+      background: linear-gradient(135deg, #14532d 0%, #166534 40%, #052e16 100%);
+      padding: 1.25rem 2rem; display: flex; align-items: center;
+      border-bottom: 1px solid #166534;
+    }
+    header h1 { font-size: 1.4rem; font-weight: 700; flex: 1; }
+    header small { display: block; opacity: .7; font-size: .8rem; }
+    .header-nav a { color: #86efac; font-size: .85rem; text-decoration: none; margin-left: 1rem; }
+    .header-nav a:hover { color: #fff; }
+    main { max-width: 1280px; margin: 1.5rem auto; padding: 0 1.5rem; }
+    .tabs { display: flex; gap: .4rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+    .tab-btn { padding: .45rem 1rem; border-radius: 6px; border: 1px solid #166534;
+      background: #0f1a0f; color: #86efac; cursor: pointer; font-size: .85rem; }
+    .tab-btn.active { background: #16a34a; color: #fff; border-color: #16a34a; }
+    .tab-panel { display: none; } .tab-panel.active { display: block; }
+    .grid { display: grid; gap: 1rem; }
+    .grid-2 { grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
+    .grid-3 { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
+    .card { background: #0f1a0f; border: 1px solid #166534; border-radius: 10px; padding: 1.25rem; }
+    .card h3 { font-size: .95rem; font-weight: 600; margin-bottom: .75rem; color: #4ade80; }
+    .kpi { text-align: center; }
+    .kpi .val { font-size: 1.5rem; font-weight: 700; color: #4ade80; }
+    .kpi .lbl { font-size: .75rem; color: #64748b; margin-top: .2rem; }
+    .item { padding: .65rem 0; border-bottom: 1px solid #14532d; }
+    .item:last-child { border-bottom: none; }
+    .item-title { font-weight: 600; font-size: .875rem; }
+    .item-desc { font-size: .78rem; color: #94a3b8; }
+    .form-row { display: flex; flex-wrap: wrap; gap: .6rem; margin-bottom: .75rem; }
+    .form-group { display: flex; flex-direction: column; gap: .3rem; flex: 1; min-width: 140px; }
+    .form-group label { font-size: .78rem; color: #86efac; }
+    .form-group input, .form-group select, .form-group textarea {
+      background: #0a0f0a; border: 1px solid #166534; color: #e2e8f0;
+      border-radius: 6px; padding: .45rem .7rem; font-size: .84rem;
+    }
+    .btn { display: inline-flex; padding: .45rem 1rem; border-radius: 6px; border: none;
+      font-size: .84rem; font-weight: 600; cursor: pointer; margin-right: .4rem; }
+    .btn-primary { background: #16a34a; color: #fff; }
+    .btn-sm { padding: .3rem .7rem; font-size: .78rem; }
+    .btn-outline { background: transparent; border: 1px solid #166534; color: #86efac; }
+    .badge { display: inline-block; padding: .15rem .5rem; border-radius: 999px; font-size: .7rem; font-weight: 700; }
+    .badge-active { background: #14532d; color: #86efac; }
+    .badge-open { background: #78350f; color: #fcd34d; }
+    .result-row { display: flex; justify-content: space-between; padding: .3rem 0; border-bottom: 1px solid #0a0f0a; font-size: .83rem; }
+    .result-row:last-child { border-bottom: none; }
+    .result-val { color: #4ade80; font-weight: 600; }
+    .loading { color: #475569; font-style: italic; font-size: .84rem; }
+    .error { color: #f87171; font-size: .83rem; }
+    .success { color: #22c55e; font-size: .83rem; }
+  </style>
+</head>
+<body>
+<header>
+  <div style="flex:1">
+    <h1>🏛️ MB Future Tech Civilization Layer</h1>
+    <small>Governance · Education · Economy · Infrastructure · Research</small>
+  </div>
+  <nav class="header-nav">
+    <a href="/dashboard">Dashboard</a>
+    <a href="/universe">Universe</a>
+    <a href="/ecosystem">Ecosystem</a>
+  </nav>
+</header>
+<main>
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('status')">Status</button>
+    <button class="tab-btn" onclick="switchTab('governance')">Governance</button>
+    <button class="tab-btn" onclick="switchTab('education')">Education</button>
+    <button class="tab-btn" onclick="switchTab('economy')">Economy</button>
+    <button class="tab-btn" onclick="switchTab('infra')">Infrastructure</button>
+    <button class="tab-btn" onclick="switchTab('research')">Research</button>
+    <button class="tab-btn" onclick="switchTab('analytics')">Analytics</button>
+  </div>
+
+  <div class="tab-panel active" id="tab-status">
+    <div class="grid grid-3" id="statusKPIs" style="margin-bottom:1rem">
+      <div class="card kpi"><div class="val loading">…</div><div class="lbl">Policies</div></div>
+      <div class="card kpi"><div class="val loading">…</div><div class="lbl">Infra Health</div></div>
+      <div class="card kpi"><div class="val loading">…</div><div class="lbl">Research</div></div>
+    </div>
+    <div class="grid grid-2">
+      <div class="card"><h3>Modules</h3><div id="modulesStatus"><p class="loading">Loading…</p></div></div>
+      <div class="card"><h3>Education & Economy</h3><div id="eduEco"><p class="loading">Loading…</p></div></div>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="tab-governance">
+    <div class="grid grid-2">
+      <div class="card">
+        <h3>Create Policy</h3>
+        <div class="form-group" style="margin-bottom:.5rem"><label>Title</label><input id="polTitle" /></div>
+        <div class="form-row">
+          <div class="form-group"><label>Category</label>
+            <select id="polCat"><option>governance</option><option>research</option><option>economy</option><option>general</option></select>
+          </div>
+        </div>
+        <div class="form-group" style="margin-bottom:.5rem"><label>Content</label><textarea id="polContent" rows="2"></textarea></div>
+        <button class="btn btn-primary" onclick="createPolicy()">Create Policy</button>
+        <div id="polMsg"></div>
+      </div>
+      <div class="card">
+        <h3>Open Vote</h3>
+        <div class="form-group" style="margin-bottom:.5rem"><label>Title</label><input id="voteTitle" /></div>
+        <div class="form-group" style="margin-bottom:.5rem"><label>Description</label><textarea id="voteDesc" rows="2"></textarea></div>
+        <button class="btn btn-primary btn-sm" onclick="openVote()">Open Vote</button>
+        <div id="voteMsg"></div>
+      </div>
+      <div class="card"><h3>Constitution</h3><div id="constitution"><p class="loading">Loading…</p></div></div>
+      <div class="card"><h3>Policies & Votes</h3><div id="govList"><p class="loading">Loading…</p></div></div>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="tab-education">
+    <div class="card" style="margin-bottom:1rem">
+      <div class="form-row">
+        <div class="form-group"><label>Employee Key</label><input id="eduKey" value="employee_1" /></div>
+        <div class="form-group"><label>Course</label><input id="eduCourse" value="MB Future Tech AI Platform Fundamentals" /></div>
+      </div>
+      <button class="btn btn-primary" onclick="enroll()">Enroll</button>
+      <button class="btn btn-outline" onclick="enrollCatalog()">Enroll Catalog</button>
+      <div id="eduMsg"></div>
+    </div>
+    <div class="grid grid-2">
+      <div class="card"><h3>Training</h3><div id="trainingList"><p class="loading">Loading…</p></div></div>
+      <div class="card"><h3>Skills & Certs</h3><div id="skillsList"><p class="loading">Loading…</p></div></div>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="tab-economy">
+    <div class="card" style="margin-bottom:1rem">
+      <div class="form-row">
+        <div class="form-group"><label>Account</label><input id="ecoKey" value="employee_1" /></div>
+        <div class="form-group"><label>Amount</label><input id="ecoAmt" type="number" value="50" /></div>
+        <div class="form-group"><label>Reason</label><input id="ecoReason" value="Performance bonus" /></div>
+      </div>
+      <button class="btn btn-primary" onclick="grantReward()">Grant Reward</button>
+      <button class="btn btn-outline" onclick="applyIncentives()">Apply Incentives</button>
+      <div id="ecoMsg"></div>
+    </div>
+    <div class="grid grid-2">
+      <div class="card"><h3>Accounts</h3><div id="accounts"><p class="loading">Loading…</p></div></div>
+      <div class="card"><h3>Recent Rewards</h3><div id="rewards"><p class="loading">Loading…</p></div></div>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="tab-infra">
+    <div class="card" style="margin-bottom:1rem">
+      <button class="btn btn-primary" onclick="runBackup()">Run Backup</button>
+      <div id="backupMsg"></div>
+    </div>
+    <div class="grid grid-2">
+      <div class="card"><h3>Nodes</h3><div id="infraNodes"><p class="loading">Loading…</p></div></div>
+      <div class="card"><h3>Backups</h3><div id="backups"><p class="loading">Loading…</p></div></div>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="tab-research">
+    <div class="card" style="margin-bottom:1rem">
+      <button class="btn btn-primary" onclick="runResearch()">Run All Research</button>
+      <div id="researchMsg"></div>
+    </div>
+    <div class="grid grid-2" id="researchResult"><p class="loading">Load research…</p></div>
+  </div>
+
+  <div class="tab-panel" id="tab-analytics">
+    <div class="grid grid-3" id="analyticsKPIs" style="margin-bottom:1rem">
+      <div class="card kpi"><div class="val loading">…</div><div class="lbl">Education Done</div></div>
+      <div class="card kpi"><div class="val loading">…</div><div class="lbl">Economy Balance</div></div>
+      <div class="card kpi"><div class="val loading">…</div><div class="lbl">Audit Events</div></div>
+    </div>
+    <div class="grid grid-2">
+      <div class="card"><h3>Analytics</h3><div id="analyticsDetail"><p class="loading">Loading…</p></div></div>
+      <div class="card"><h3>Audit Trail</h3><div id="auditLog"><p class="loading">Loading…</p></div></div>
+    </div>
+  </div>
+</main>
+<script>
+const API = '';
+let TOKEN = localStorage.getItem('token') || '';
+async function api(path, method='GET', body=null) {
+  const opts = { method, headers: { 'Authorization': `Bearer ${TOKEN}`, 'Content-Type': 'application/json' } };
+  if (body) opts.body = JSON.stringify(body);
+  const r = await fetch(API + path, opts);
+  if (!r.ok) throw new Error((await r.json()).detail || r.statusText);
+  return r.json();
+}
+function switchTab(name) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.getAttribute('onclick').includes(`'${name}'`)));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id === 'tab-' + name));
+}
+
+async function loadStatus() {
+  try {
+    const s = await api('/civilization/status');
+    const kpis = document.querySelectorAll('#statusKPIs .kpi');
+    kpis[0].querySelector('.val').textContent = s.governance?.policies ?? 0;
+    kpis[1].querySelector('.val').textContent = ((s.infrastructure?.health_score ?? 0) * 100).toFixed(0) + '%';
+    kpis[2].querySelector('.val').textContent = s.research_count ?? 0;
+    document.getElementById('modulesStatus').innerHTML = Object.entries(s.modules||{}).map(([k,v]) =>
+      `<div class="result-row"><span>${k}</span><span class="result-val"><span class="badge badge-active">${v}</span></span></div>`).join('');
+    document.getElementById('eduEco').innerHTML = `
+      <div class="result-row"><span>Training enrolled</span><span class="result-val">${s.education?.enrolled??0}</span></div>
+      <div class="result-row"><span>Certifications</span><span class="result-val">${s.education?.certifications??0}</span></div>
+      <div class="result-row"><span>Economy balance</span><span class="result-val">${s.economy?.total_balance??0}</span></div>
+      <div class="result-row"><span>Rewards issued</span><span class="result-val">${s.economy?.rewards_issued??0}</span></div>
+      <div class="result-row"><span>Infra backups</span><span class="result-val">${s.infrastructure?.backups??0}</span></div>`;
+  } catch(e) { console.error(e); }
+}
+
+async function loadGovernance() {
+  try {
+    const g = await api('/civilization/governance');
+    const c = g.constitution || {};
+    document.getElementById('constitution').innerHTML = `
+      <div class="item-title">${c.title||'Constitution'}</div>
+      <div class="item-desc">v${c.version||'1.0'} · ${c.ratified?'Ratified':'Draft'}</div>
+      ${(c.articles||[]).slice(0,4).map(a=>`<div class="item"><div class="item-desc">• ${a}</div></div>`).join('')}
+      ${!c.ratified && c.id ? `<button class="btn btn-sm btn-outline" onclick="ratify(${c.id})">Ratify</button>` : ''}`;
+    document.getElementById('govList').innerHTML =
+      (g.policies||[]).map(p=>`<div class="item"><div class="item-title">${p.title}</div><div class="item-desc">${p.category}</div></div>`).join('') +
+      (g.votes||[]).map(v=>`<div class="item"><div class="item-title">${v.title} <span class="badge badge-${v.status==='open'?'open':'active'}">${v.status}</span></div></div>`).join('');
+  } catch(e) { console.error(e); }
+}
+
+async function createPolicy() {
+  const el = document.getElementById('polMsg');
+  try {
+    await api('/civilization/policies', 'POST', {
+      title: document.getElementById('polTitle').value,
+      category: document.getElementById('polCat').value,
+      content: document.getElementById('polContent').value,
+    });
+    el.innerHTML = '<p class="success">Policy created.</p>';
+    loadGovernance(); loadStatus();
+  } catch(e) { el.innerHTML = `<p class="error">${e.message}</p>`; }
+}
+
+async function openVote() {
+  const el = document.getElementById('voteMsg');
+  try {
+    await api('/civilization/governance/votes', 'POST', {
+      title: document.getElementById('voteTitle').value,
+      description: document.getElementById('voteDesc').value,
+    });
+    el.innerHTML = '<p class="success">Vote opened.</p>';
+    loadGovernance();
+  } catch(e) { el.innerHTML = `<p class="error">${e.message}</p>`; }
+}
+
+async function ratify(id) {
+  await api(`/civilization/governance/constitution/${id}/ratify`, 'POST');
+  loadGovernance();
+}
+
+async function loadEducation() {
+  try {
+    const e = await api('/civilization/education');
+    document.getElementById('trainingList').innerHTML = (e.training||[]).map(t =>
+      `<div class="item"><div class="item-title">${t.course_title}</div>
+      <div class="item-desc">${t.employee_key} · ${t.progress}% · ${t.status}</div></div>`
+    ).join('') || '<p class="loading">No training yet.</p>';
+    document.getElementById('skillsList').innerHTML =
+      (e.skills||[]).map(s=>`<div class="item"><div class="item-title">${s.skill_name}</div><div class="item-desc">L${s.level} · ${s.employee_key}</div></div>`).join('') +
+      (e.certifications||[]).map(c=>`<div class="item"><div class="item-title">🏅 ${c.cert_name}</div></div>`).join('') ||
+      '<p class="loading">No skills yet.</p>';
+  } catch(e) { console.error(e); }
+}
+
+async function enroll() {
+  const el = document.getElementById('eduMsg');
+  try {
+    await api('/civilization/education/enroll', 'POST', {
+      employee_key: document.getElementById('eduKey').value,
+      course_title: document.getElementById('eduCourse').value,
+    });
+    el.innerHTML = '<p class="success">Enrolled.</p>';
+    loadEducation();
+  } catch(e) { el.innerHTML = `<p class="error">${e.message}</p>`; }
+}
+
+async function enrollCatalog() {
+  const el = document.getElementById('eduMsg');
+  try {
+    await api('/civilization/education/enroll-catalog?employee_key=' + encodeURIComponent(document.getElementById('eduKey').value), 'POST');
+    el.innerHTML = '<p class="success">Catalog enrolled.</p>';
+    loadEducation();
+  } catch(e) { el.innerHTML = `<p class="error">${e.message}</p>`; }
+}
+
+async function loadEconomy() {
+  try {
+    const e = await api('/civilization/economy');
+    document.getElementById('accounts').innerHTML = (e.accounts||[]).map(a =>
+      `<div class="item"><div class="item-title">${a.account_key}</div><div class="item-desc">${a.account_type} · balance ${a.balance}</div></div>`
+    ).join('') || '<p class="loading">No accounts.</p>';
+    document.getElementById('rewards').innerHTML = (e.recent_rewards||[]).map(r =>
+      `<div class="item"><div class="item-title">+${r.amount} ${r.account_key}</div><div class="item-desc">${r.reason}</div></div>`
+    ).join('') || '<p class="loading">No rewards.</p>';
+  } catch(e) { console.error(e); }
+}
+
+async function grantReward() {
+  const el = document.getElementById('ecoMsg');
+  try {
+    await api('/civilization/economy/rewards', 'POST', {
+      account_key: document.getElementById('ecoKey').value,
+      amount: parseFloat(document.getElementById('ecoAmt').value),
+      reason: document.getElementById('ecoReason').value,
+    });
+    el.innerHTML = '<p class="success">Reward granted.</p>';
+    loadEconomy(); loadStatus();
+  } catch(e) { el.innerHTML = `<p class="error">${e.message}</p>`; }
+}
+
+async function applyIncentives() {
+  const el = document.getElementById('ecoMsg');
+  try {
+    const r = await api('/civilization/economy/incentives', 'POST', {
+      account_key: document.getElementById('ecoKey').value,
+      metrics: { customer_satisfaction: 85, sales_quota: 100, training_completion: 100, innovation_score: 72 },
+    });
+    el.innerHTML = `<p class="success">${r.length} incentives applied.</p>`;
+    loadEconomy();
+  } catch(e) { el.innerHTML = `<p class="error">${e.message}</p>`; }
+}
+
+async function loadInfra() {
+  try {
+    const i = await api('/civilization/infrastructure');
+    document.getElementById('infraNodes').innerHTML = (i.nodes||[]).map(n =>
+      `<div class="item"><div class="item-title">${n.name} <span class="badge badge-active">${n.status}</span></div>
+      <div class="item-desc">${n.node_type}</div></div>`
+    ).join('') || '<p class="loading">No nodes.</p>';
+    document.getElementById('backups').innerHTML = (i.backups||[]).map(b =>
+      `<div class="item"><div class="item-title">${b.backup_type}</div><div class="item-desc">${b.size_mb} MB · ${b.status}</div></div>`
+    ).join('') || '<p class="loading">No backups.</p>';
+  } catch(e) { console.error(e); }
+}
+
+async function runBackup() {
+  const el = document.getElementById('backupMsg');
+  try {
+    const b = await api('/civilization/infrastructure/backup?backup_type=full', 'POST');
+    el.innerHTML = `<p class="success">Backup #${b.id} completed (${b.size_mb} MB).</p>`;
+    loadInfra();
+  } catch(e) { el.innerHTML = `<p class="error">${e.message}</p>`; }
+}
+
+async function loadResearch() {
+  try {
+    const r = await api('/civilization/research');
+    const items = r.history || Object.values(r).filter(v => v && v.title);
+    const list = r.history || [
+      r.ai_experiments, r.business_models, r.product_innovation, r.market_discovery
+    ].filter(Boolean);
+    document.getElementById('researchResult').innerHTML = list.map(item =>
+      `<div class="card"><h3>${item.title}</h3><div class="item-desc">${item.summary||''}</div>
+      <div class="item-val">${item.research_type||''}</div></div>`
+    ).join('') || '<p class="loading">No research yet. Click Run All Research.</p>';
+  } catch(e) { console.error(e); }
+}
+
+async function runResearch() {
+  const el = document.getElementById('researchMsg');
+  el.innerHTML = '<p class="loading">Running…</p>';
+  try {
+    await api('/civilization/research/run', 'POST');
+    el.innerHTML = '<p class="success">Research complete.</p>';
+    loadResearch(); loadStatus();
+  } catch(e) { el.innerHTML = `<p class="error">${e.message}</p>`; }
+}
+
+async function loadAnalytics() {
+  try {
+    const a = await api('/civilization/analytics');
+    const kpis = document.querySelectorAll('#analyticsKPIs .kpi');
+    kpis[0].querySelector('.val').textContent = a.education?.completed ?? 0;
+    kpis[1].querySelector('.val').textContent = a.economy?.total_balance ?? 0;
+    kpis[2].querySelector('.val').textContent = a.audit_events ?? 0;
+    document.getElementById('analyticsDetail').innerHTML = `
+      <div class="result-row"><span>Policies</span><span class="result-val">${a.governance?.policies??0}</span></div>
+      <div class="result-row"><span>Decisions</span><span class="result-val">${a.governance?.decisions??0}</span></div>
+      <div class="result-row"><span>Certifications</span><span class="result-val">${a.education?.certifications??0}</span></div>
+      <div class="result-row"><span>Infra health</span><span class="result-val">${((a.infrastructure?.health_score||0)*100).toFixed(0)}%</span></div>
+      <div class="result-row"><span>Research total</span><span class="result-val">${a.research?.total??0}</span></div>`;
+    document.getElementById('auditLog').innerHTML = (a.recent_audit||[]).map(ev =>
+      `<div class="item"><div class="item-title">${ev.action}</div><div class="item-desc">${ev.details||''}</div></div>`
+    ).join('') || '<p class="loading">No audit events.</p>';
+  } catch(e) { console.error(e); }
+}
+
+if (!TOKEN) { window.location.href = '/login'; }
+else {
+  loadStatus(); loadGovernance(); loadEducation(); loadEconomy();
+  loadInfra(); loadResearch(); loadAnalytics();
+}
+</script>
+</body>
+</html>

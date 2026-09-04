@@ -1,0 +1,7 @@
+{
+    "name": "Inventory Sync",
+    "version": "1.0.0",
+    "author": "Aura",
+    "description": "Sync and summarize inventory product data.",
+    "permissions": ["access_inventory", "read_company_profile"]
+}

@@ -1,0 +1,828 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MB Future Tech — AI Chatbot | Global Intelligence</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, sans-serif; background: #0a0f1e; color: #e2e8f0; min-height: 100vh; }
+
+    header {
+      background: linear-gradient(135deg, #0d4f8c 0%, #1a6bb5 50%, #0e7c61 100%);
+      padding: 1.25rem 2rem; display: flex; align-items: center; gap: 1rem;
+    }
+    header h1 { font-size: 1.4rem; font-weight: 700; }
+    header small { opacity: .75; font-size: .85rem; }
+    .header-nav a { color: #93c5fd; font-size: .85rem; text-decoration: none; margin-left: 1rem; }
+    .header-nav a:hover { color: #fff; }
+
+    main { max-width: 1200px; margin: 2rem auto; padding: 0 1.5rem; }
+
+    .tabs { display: flex; gap: .5rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+    .tab-btn {
+      padding: .5rem 1.1rem; border-radius: 6px; border: 1px solid #1e3a5f;
+      background: #0d1f3c; color: #93c5fd; cursor: pointer; font-size: .875rem;
+      transition: all .2s;
+    }
+    .tab-btn.active { background: #1a6bb5; color: #fff; border-color: #1a6bb5; }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    .grid { display: grid; gap: 1rem; }
+    .grid-2 { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+    .grid-3 { grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); }
+    .grid-4 { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
+
+    .card {
+      background: #0d1f3c; border: 1px solid #1e3a5f; border-radius: 10px; padding: 1.25rem;
+    }
+    .card h3 { font-size: 1rem; font-weight: 600; margin-bottom: .75rem; color: #60a5fa; }
+
+    .lang-chip {
+      display: inline-flex; align-items: center; gap: .4rem;
+      background: #1e3a5f; border: 1px solid #2563eb; border-radius: 20px;
+      padding: .35rem .75rem; font-size: .8rem; margin: .25rem; cursor: pointer;
+      transition: all .2s;
+    }
+    .lang-chip:hover { background: #1a6bb5; color: #fff; }
+    .lang-chip.active { background: #1d4ed8; color: #fff; border-color: #3b82f6; }
+
+    .form-row { display: flex; flex-wrap: wrap; gap: .75rem; margin-bottom: 1rem; }
+    .form-group { display: flex; flex-direction: column; gap: .35rem; flex: 1; min-width: 160px; }
+    .form-group label { font-size: .8rem; color: #93c5fd; }
+    .form-group input, .form-group select, .form-group textarea {
+      background: #060e1e; border: 1px solid #1e3a5f; color: #e2e8f0;
+      border-radius: 6px; padding: .5rem .75rem; font-size: .875rem;
+    }
+    textarea { resize: vertical; min-height: 100px; font-family: inherit; }
+
+    .btn {
+      display: inline-flex; align-items: center; gap: .5rem;
+      padding: .55rem 1.2rem; border-radius: 7px; border: none;
+      font-size: .875rem; font-weight: 600; cursor: pointer; transition: all .2s;
+    }
+    .btn-primary { background: #1a6bb5; color: #fff; }
+    .btn-primary:hover { background: #2563eb; }
+    .btn-outline { background: transparent; border: 1px solid #1e3a5f; color: #93c5fd; }
+    .btn-outline:hover { border-color: #2563eb; color: #60a5fa; }
+
+    .result-box {
+      margin-top: 1rem; background: #060e1e; border: 1px solid #1e3a5f;
+      border-radius: 8px; padding: 1rem;
+    }
+    .result-box h4 { color: #60a5fa; margin-bottom: .75rem; font-size: .9rem; }
+
+    .kpi { text-align: center; }
+    .kpi .value { font-size: 1.8rem; font-weight: 700; color: #60a5fa; }
+    .kpi .label { font-size: .8rem; color: #64748b; margin-top: .2rem; }
+
+    .trend-item {
+      padding: .85rem 0; border-bottom: 1px solid #1e3a5f;
+    }
+    .trend-item:last-child { border-bottom: none; }
+    .trend-item .trend-title { font-weight: 600; font-size: .9rem; margin-bottom: .3rem; }
+    .trend-item .trend-desc { font-size: .8rem; color: #94a3b8; line-height: 1.5; }
+    .trend-item .trend-action { font-size: .78rem; color: #34d399; margin-top: .3rem; }
+
+    .badge {
+      display: inline-block; padding: .2rem .6rem; border-radius: 999px;
+      font-size: .72rem; font-weight: 700;
+    }
+    .badge-high { background: #7f1d1d; color: #fca5a5; }
+    .badge-medium { background: #78350f; color: #fcd34d; }
+    .badge-low { background: #14532d; color: #86efac; }
+    .badge-blue { background: #1e3a8a; color: #93c5fd; }
+
+    .reg-item {
+      padding: .75rem 0; border-bottom: 1px solid #1e3a5f;
+    }
+    .reg-item:last-child { border-bottom: none; }
+    .reg-item .reg-title { font-weight: 600; font-size: .875rem; }
+    .reg-item .reg-desc { font-size: .8rem; color: #94a3b8; margin-top: .25rem; }
+
+    .swot { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem; }
+    .swot-cell { background: #060e1e; border-radius: 6px; padding: .6rem .75rem; }
+    .swot-cell h5 { font-size: .75rem; color: #93c5fd; margin-bottom: .4rem; text-transform: uppercase; }
+    .swot-cell li { font-size: .78rem; color: #94a3b8; margin-left: 1rem; line-height: 1.6; }
+
+    .currency-row { display: flex; justify-content: space-between; padding: .4rem 0; border-bottom: 1px solid #1e3a5f; font-size: .85rem; }
+    .currency-row:last-child { border-bottom: none; }
+    .currency-row .amt { color: #60a5fa; font-weight: 600; }
+
+    .assistant-bubble {
+      margin-top: 1rem; padding: 1rem; background: #060e1e;
+      border-left: 3px solid #1a6bb5; border-radius: 0 8px 8px 0;
+    }
+    .assistant-bubble .q { font-size: .8rem; color: #64748b; margin-bottom: .5rem; }
+    .assistant-bubble .a { font-size: .875rem; color: #e2e8f0; line-height: 1.65; white-space: pre-wrap; }
+    .assistant-bubble .disc { font-size: .75rem; color: #f59e0b; margin-top: .75rem; font-style: italic; }
+
+    .doc-flags { margin-top: .75rem; }
+    .doc-flag { display: flex; gap: .5rem; padding: .4rem 0; border-bottom: 1px solid #1e3a5f; font-size: .82rem; align-items: flex-start; }
+    .doc-flag:last-child { border-bottom: none; }
+
+    .loading { color: #475569; font-style: italic; font-size: .85rem; }
+    .error { color: #f87171; font-size: .875rem; padding: .5rem; background: #7f1d1d22; border-radius: 6px; }
+
+    .checklist-item {
+      display: flex; align-items: flex-start; gap: .6rem; padding: .5rem 0; border-bottom: 1px solid #1e3a5f;
+      font-size: .85rem;
+    }
+    .checklist-item:last-child { border-bottom: none; }
+    .check-icon { color: #22c55e; font-size: 1rem; }
+    .check-desc { color: #94a3b8; font-size: .75rem; }
+  </style>
+<script src="/static/aura-notifications.js"></script>
+</head>
+<body>
+<header>
+  <div style="flex:1">
+    <h1>🌐 MB Future Tech Global Intelligence</h1>
+    <small>Multi-Language · Localization · Global Insights · AI Assistants</small>
+  </div>
+  <nav class="header-nav">
+    <a href="/dashboard">Dashboard</a>
+    <a href="/intelligence">Intelligence</a>
+    <a href="/network">Network</a>
+  </nav>
+</header>
+
+<main>
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('overview')">Overview</button>
+    <button class="tab-btn" onclick="switchTab('translation')">Translation</button>
+    <button class="tab-btn" onclick="switchTab('currencies')">Currencies</button>
+    <button class="tab-btn" onclick="switchTab('documents')">Documents</button>
+    <button class="tab-btn" onclick="switchTab('insights')">Global Insights</button>
+    <button class="tab-btn" onclick="switchTab('regulations')">Regulations</button>
+    <button class="tab-btn" onclick="switchTab('assistants')">AI Assistants</button>
+  </div>
+
+  <!-- Overview -->
+  <div class="tab-panel active" id="tab-overview">
+    <div class="grid grid-2" style="margin-bottom:1rem">
+      <div class="card">
+        <h3>Language Settings</h3>
+        <div id="langSettings"><p class="loading">Loading…</p></div>
+        <div style="margin-top:1rem">
+          <div style="font-size:.8rem;color:#93c5fd;margin-bottom:.5rem">Supported Languages</div>
+          <div id="langChips"></div>
+        </div>
+      </div>
+      <div class="card">
+        <h3>Quick Translate</h3>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Text</label>
+            <input type="text" id="quickText" placeholder="Hello" value="Hello" />
+          </div>
+          <div class="form-group">
+            <label>To Language</label>
+            <select id="quickLang">
+              <option value="fil">🇵🇭 Filipino</option>
+              <option value="zh">🇨🇳 Chinese</option>
+              <option value="ja">🇯🇵 Japanese</option>
+              <option value="ko">🇰🇷 Korean</option>
+              <option value="es">🇪🇸 Spanish</option>
+            </select>
+          </div>
+        </div>
+        <button class="btn btn-primary" onclick="quickTranslate()">Translate</button>
+        <div id="quickResult"></div>
+      </div>
+    </div>
+    <div class="grid grid-3">
+      <div class="card kpi" id="kpiTrends"><div class="value loading">…</div><div class="label">Industry Trends</div></div>
+      <div class="card kpi" id="kpiOpps"><div class="value loading">…</div><div class="label">Market Opportunities</div></div>
+      <div class="card kpi" id="kpiDocs"><div class="value loading">…</div><div class="label">Documents Analysed</div></div>
+    </div>
+  </div>
+
+  <!-- Translation Tab -->
+  <div class="tab-panel" id="tab-translation">
+    <div class="grid grid-2">
+      <div class="card">
+        <h3>Translate Text</h3>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Source Language</label>
+            <select id="srcLang">
+              <option value="en">🇺🇸 English</option>
+              <option value="fil">🇵🇭 Filipino</option>
+              <option value="zh">🇨🇳 Chinese</option>
+              <option value="ja">🇯🇵 Japanese</option>
+              <option value="ko">🇰🇷 Korean</option>
+              <option value="es">🇪🇸 Spanish</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Target Language</label>
+            <select id="tgtLang">
+              <option value="fil">🇵🇭 Filipino</option>
+              <option value="zh">🇨🇳 Chinese</option>
+              <option value="ja">🇯🇵 Japanese</option>
+              <option value="ko">🇰🇷 Korean</option>
+              <option value="es">🇪🇸 Spanish</option>
+              <option value="en">🇺🇸 English</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group" style="margin-bottom:.75rem">
+          <label>Text to Translate</label>
+          <textarea id="transText" placeholder="Enter text here…">How can I help you?</textarea>
+        </div>
+        <button class="btn btn-primary" onclick="doTranslate()">Translate</button>
+        <div id="transResult"></div>
+      </div>
+      <div class="card">
+        <h3>Batch Translate</h3>
+        <div class="form-group" style="margin-bottom:.75rem">
+          <label>Phrases (one per line)</label>
+          <textarea id="batchText" placeholder="Hello&#10;Thank you&#10;Order confirmed" style="min-height:120px">Hello
+Thank you
+Order confirmed
+Good morning</textarea>
+        </div>
+        <div class="form-group" style="margin-bottom:.75rem">
+          <label>Target Language</label>
+          <select id="batchLang">
+            <option value="fil">🇵🇭 Filipino</option>
+            <option value="zh">🇨🇳 Chinese</option>
+            <option value="ja">🇯🇵 Japanese</option>
+            <option value="ko">🇰🇷 Korean</option>
+            <option value="es">🇪🇸 Spanish</option>
+          </select>
+        </div>
+        <button class="btn btn-primary" onclick="doBatchTranslate()">Batch Translate</button>
+        <div id="batchResult"></div>
+      </div>
+      <div class="card" style="grid-column:1/-1">
+        <h3>Translation History</h3>
+        <div id="transHistory"><p class="loading">Loading…</p></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Currencies Tab -->
+  <div class="tab-panel" id="tab-currencies">
+    <div class="grid grid-2">
+      <div class="card">
+        <h3>Currency Converter</h3>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Amount</label>
+            <input type="number" id="convAmount" value="1000" />
+          </div>
+          <div class="form-group">
+            <label>From</label>
+            <select id="convFrom">
+              <option value="PHP">PHP — Philippine Peso</option>
+              <option value="USD">USD — US Dollar</option>
+              <option value="EUR">EUR — Euro</option>
+              <option value="CNY">CNY — Chinese Yuan</option>
+              <option value="JPY">JPY — Japanese Yen</option>
+              <option value="KRW">KRW — Korean Won</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>To</label>
+            <select id="convTo">
+              <option value="USD">USD — US Dollar</option>
+              <option value="PHP">PHP — Philippine Peso</option>
+              <option value="EUR">EUR — Euro</option>
+              <option value="CNY">CNY — Chinese Yuan</option>
+              <option value="JPY">JPY — Japanese Yen</option>
+              <option value="KRW">KRW — Korean Won</option>
+            </select>
+          </div>
+        </div>
+        <button class="btn btn-primary" onclick="doConvert()">Convert</button>
+        <div id="convResult"></div>
+      </div>
+      <div class="card">
+        <h3>Multi-Currency Price</h3>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Amount</label>
+            <input type="number" id="multiAmount" value="5000" />
+          </div>
+          <div class="form-group">
+            <label>Base Currency</label>
+            <select id="multiBase">
+              <option value="PHP">PHP</option>
+              <option value="USD">USD</option>
+              <option value="EUR">EUR</option>
+            </select>
+          </div>
+        </div>
+        <button class="btn btn-primary" onclick="doMultiPrice()">Show All Prices</button>
+        <div id="multiResult"></div>
+      </div>
+      <div class="card">
+        <h3>Tax Lookup</h3>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Country Code</label>
+            <select id="taxCountry">
+              <option value="PH">PH — Philippines</option>
+              <option value="US">US — United States</option>
+              <option value="CN">CN — China</option>
+              <option value="JP">JP — Japan</option>
+              <option value="KR">KR — South Korea</option>
+              <option value="ES">ES — Spain</option>
+              <option value="EU">EU — European Union</option>
+            </select>
+          </div>
+        </div>
+        <button class="btn btn-primary" onclick="doTaxLookup()">Look Up Tax</button>
+        <div id="taxResult"></div>
+      </div>
+      <div class="card">
+        <h3>All Supported Currencies</h3>
+        <div id="currencyList"><p class="loading">Loading…</p></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Documents Tab -->
+  <div class="tab-panel" id="tab-documents">
+    <div class="grid grid-2">
+      <div class="card">
+        <h3>Analyse Document</h3>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Document Type</label>
+            <select id="docType">
+              <option value="contract">Contract</option>
+              <option value="invoice">Invoice</option>
+              <option value="report">Report</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Document Name</label>
+            <input type="text" id="docName" placeholder="e.g. Supplier Agreement Q3" />
+          </div>
+        </div>
+        <div class="form-group" style="margin-bottom:.75rem">
+          <label>Paste Document Content</label>
+          <textarea id="docContent" style="min-height:150px" placeholder="Paste the full text of the document here…"></textarea>
+        </div>
+        <button class="btn btn-primary" onclick="analyzeDoc()">Analyse Document</button>
+        <div id="docResult"></div>
+      </div>
+      <div class="card">
+        <h3>Document History</h3>
+        <div class="form-group" style="margin-bottom:.5rem">
+          <label>Filter by Type</label>
+          <select id="docFilter" onchange="loadDocHistory()">
+            <option value="">All Types</option>
+            <option value="contract">Contracts</option>
+            <option value="invoice">Invoices</option>
+            <option value="report">Reports</option>
+          </select>
+        </div>
+        <div id="docHistory"><p class="loading">Loading…</p></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Insights Tab -->
+  <div class="tab-panel" id="tab-insights">
+    <div class="grid grid-2">
+      <div class="card">
+        <h3>Industry Trends</h3>
+        <div id="trendsList"><p class="loading">Loading…</p></div>
+      </div>
+      <div class="card">
+        <h3>Competitor Analysis (SWOT)</h3>
+        <div id="swotChart"></div>
+      </div>
+      <div class="card">
+        <h3>Market Opportunities</h3>
+        <div id="oppsList"><p class="loading">Loading…</p></div>
+      </div>
+      <div class="card">
+        <h3>Growth Recommendations</h3>
+        <div id="growthList"><p class="loading">Loading…</p></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Regulations Tab -->
+  <div class="tab-panel" id="tab-regulations">
+    <div class="grid grid-2">
+      <div class="card">
+        <h3>Compliance Checklist</h3>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Country</label>
+            <select id="regCountry">
+              <option value="PH">🇵🇭 Philippines</option>
+              <option value="US">🇺🇸 United States</option>
+              <option value="CN">🇨🇳 China</option>
+              <option value="JP">🇯🇵 Japan</option>
+              <option value="KR">🇰🇷 South Korea</option>
+              <option value="ES">🇪🇸 Spain</option>
+              <option value="EU">🇪🇺 European Union</option>
+            </select>
+          </div>
+        </div>
+        <button class="btn btn-primary" onclick="loadCompliance()">Load Checklist</button>
+        <div id="complianceList" style="margin-top:.75rem"><p class="loading">Loading…</p></div>
+      </div>
+      <div class="card">
+        <h3>Regulations Database</h3>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Filter Country</label>
+            <select id="regFilterCountry" onchange="loadRegulations()">
+              <option value="">All Countries</option>
+              <option value="PH">Philippines</option>
+              <option value="US">United States</option>
+              <option value="EU">European Union</option>
+              <option value="JP">Japan</option>
+              <option value="CN">China</option>
+              <option value="KR">South Korea</option>
+              <option value="ES">Spain</option>
+            </select>
+          </div>
+        </div>
+        <div id="regList"><p class="loading">Loading…</p></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- AI Assistants Tab -->
+  <div class="tab-panel" id="tab-assistants">
+    <div class="grid grid-2">
+      <div class="card">
+        <h3>Ask an AI Assistant</h3>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Assistant Type</label>
+            <select id="assistType">
+              <option value="legal">⚖️ Legal Assistant</option>
+              <option value="financial">💰 Financial Assistant</option>
+              <option value="operations">⚙️ Operations Assistant</option>
+              <option value="strategy">🎯 Strategy Assistant</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group" style="margin-bottom:.75rem">
+          <label>Your Question</label>
+          <textarea id="assistQ" style="min-height:100px" placeholder="e.g. What contracts do I need when hiring a freelancer in the Philippines?"></textarea>
+        </div>
+        <button class="btn btn-primary" onclick="askAssistant()">Ask Assistant</button>
+        <div id="assistResult"></div>
+      </div>
+      <div class="card">
+        <h3>Assistant Guide</h3>
+        <div style="font-size:.85rem;color:#94a3b8;line-height:1.7">
+          <div style="margin-bottom:1rem">
+            <div style="color:#60a5fa;font-weight:600;margin-bottom:.3rem">⚖️ Legal Assistant</div>
+            Contracts, compliance, employee agreements, regulations, intellectual property, business registration.
+          </div>
+          <div style="margin-bottom:1rem">
+            <div style="color:#60a5fa;font-weight:600;margin-bottom:.3rem">💰 Financial Assistant</div>
+            Cash flow management, budgeting, investment options, tax planning, financial ratios, pricing strategy.
+          </div>
+          <div style="margin-bottom:1rem">
+            <div style="color:#60a5fa;font-weight:600;margin-bottom:.3rem">⚙️ Operations Assistant</div>
+            Workflow optimisation, supply chain, inventory management, team structure, process improvement.
+          </div>
+          <div>
+            <div style="color:#60a5fa;font-weight:600;margin-bottom:.3rem">🎯 Strategy Assistant</div>
+            Market analysis, competitive positioning, growth planning, pricing strategy, expansion planning.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script>
+const API = '';
+let TOKEN = localStorage.getItem('token') || '';
+
+async function api(path, method = 'GET', body = null) {
+  const opts = {
+    method,
+    headers: { 'Authorization': `Bearer ${TOKEN}`, 'Content-Type': 'application/json' },
+  };
+  if (body) opts.body = JSON.stringify(body);
+  const r = await fetch(API + path, opts);
+  if (!r.ok) throw new Error((await r.json()).detail || r.statusText);
+  return r.json();
+}
+
+function switchTab(name) {
+  document.querySelectorAll('.tab-btn').forEach(b => {
+    b.classList.toggle('active', b.getAttribute('onclick').includes(`'${name}'`));
+  });
+  document.querySelectorAll('.tab-panel').forEach(p => {
+    p.classList.toggle('active', p.id === 'tab-' + name);
+  });
+}
+
+// ── Overview ──────────────────────────────────────────────────────────────────
+
+async function loadOverview() {
+  try {
+    const [settings, langs, report] = await Promise.all([
+      api('/global/settings'),
+      api('/global/languages'),
+      api('/global/reports'),
+    ]);
+
+    document.getElementById('langSettings').innerHTML = `
+      <div style="font-size:.85rem;color:#94a3b8">
+        <div style="margin-bottom:.3rem">Primary language: <strong style="color:#e2e8f0">${settings.primary_language?.toUpperCase()}</strong></div>
+        <div style="margin-bottom:.3rem">Timezone: <strong style="color:#e2e8f0">${settings.timezone}</strong></div>
+        <div style="margin-bottom:.3rem">Currency: <strong style="color:#e2e8f0">${settings.currency_code}</strong></div>
+        <div>Date format: <strong style="color:#e2e8f0">${settings.date_format}</strong></div>
+      </div>`;
+
+    const chips = document.getElementById('langChips');
+    chips.innerHTML = langs.map(l =>
+      `<span class="lang-chip ${l.code === settings.primary_language ? 'active' : ''}">${l.flag || ''} ${l.name}</span>`
+    ).join('');
+
+    const kpiTrends = document.getElementById('kpiTrends');
+    kpiTrends.querySelector('.value').textContent = report.industry_trends?.length || 0;
+    kpiTrends.querySelector('.label').textContent = 'Industry Trends';
+
+    const kpiOpps = document.getElementById('kpiOpps');
+    kpiOpps.querySelector('.value').textContent = report.market_opportunities?.length || 0;
+    kpiOpps.querySelector('.label').textContent = 'Market Opportunities';
+
+    const kpiDocs = document.getElementById('kpiDocs');
+    kpiDocs.querySelector('.value').textContent = report.recent_documents?.length || 0;
+    kpiDocs.querySelector('.label').textContent = 'Documents Analysed';
+
+  } catch(e) { console.error(e); }
+}
+
+async function quickTranslate() {
+  const text = document.getElementById('quickText').value;
+  const lang = document.getElementById('quickLang').value;
+  try {
+    const r = await api('/global/translate', 'POST', { text, target_lang: lang });
+    document.getElementById('quickResult').innerHTML =
+      `<div class="result-box"><strong>${r.translated_text}</strong></div>`;
+  } catch(e) {
+    document.getElementById('quickResult').innerHTML = `<p class="error">${e.message}</p>`;
+  }
+}
+
+// ── Translation ───────────────────────────────────────────────────────────────
+
+async function doTranslate() {
+  const text = document.getElementById('transText').value;
+  const src = document.getElementById('srcLang').value;
+  const tgt = document.getElementById('tgtLang').value;
+  try {
+    const r = await api('/global/translate', 'POST', { text, source_lang: src, target_lang: tgt });
+    document.getElementById('transResult').innerHTML =
+      `<div class="result-box"><h4>Translation</h4><div style="font-size:1rem;color:#e2e8f0">${r.translated_text}</div></div>`;
+    loadTransHistory();
+  } catch(e) {
+    document.getElementById('transResult').innerHTML = `<p class="error">${e.message}</p>`;
+  }
+}
+
+async function doBatchTranslate() {
+  const lines = document.getElementById('batchText').value.split('\n').filter(l => l.trim());
+  const lang = document.getElementById('batchLang').value;
+  try {
+    const results = await api('/global/translate/batch', 'POST', { texts: lines, target_lang: lang });
+    document.getElementById('batchResult').innerHTML =
+      `<div class="result-box"><h4>Results</h4>` +
+      results.map(r => `<div class="currency-row"><span>${r.source}</span><span class="amt">${r.translated}</span></div>`).join('') +
+      `</div>`;
+  } catch(e) {
+    document.getElementById('batchResult').innerHTML = `<p class="error">${e.message}</p>`;
+  }
+}
+
+async function loadTransHistory() {
+  try {
+    const history = await api('/global/translations');
+    document.getElementById('transHistory').innerHTML = history.length
+      ? history.map(t => `<div class="currency-row">
+          <span>[${t.source_lang}→${t.target_lang}] ${t.source_text?.slice(0,40)}</span>
+          <span class="amt">${t.translated_text?.slice(0,40)}</span>
+        </div>`).join('')
+      : '<p class="loading">No translations yet.</p>';
+  } catch(e) {}
+}
+
+// ── Currencies ────────────────────────────────────────────────────────────────
+
+async function loadCurrencies() {
+  try {
+    const currencies = await api('/global/currencies');
+    document.getElementById('currencyList').innerHTML = currencies.map(c =>
+      `<div class="currency-row">
+        <span>${c.symbol} ${c.code} — ${c.name}</span>
+        <span style="color:#64748b;font-size:.78rem">${c.rate > 1 ? c.rate.toFixed(2) : c.rate.toFixed(4)} PHP</span>
+      </div>`
+    ).join('');
+  } catch(e) {}
+}
+
+async function doConvert() {
+  const amount = parseFloat(document.getElementById('convAmount').value);
+  const from = document.getElementById('convFrom').value;
+  const to = document.getElementById('convTo').value;
+  try {
+    const r = await api('/global/currencies/convert', 'POST', { amount, from_currency: from, to_currency: to });
+    document.getElementById('convResult').innerHTML = `
+      <div class="result-box">
+        <div style="font-size:1.4rem;font-weight:700;color:#60a5fa">${r.from.symbol}${r.from.amount.toLocaleString()} = ${r.to.symbol}${r.to.amount.toLocaleString()}</div>
+        <div style="font-size:.8rem;color:#64748b;margin-top:.3rem">Rate: ${r.rate} · ${r.note}</div>
+      </div>`;
+  } catch(e) {
+    document.getElementById('convResult').innerHTML = `<p class="error">${e.message}</p>`;
+  }
+}
+
+async function doMultiPrice() {
+  const amount = parseFloat(document.getElementById('multiAmount').value);
+  const base = document.getElementById('multiBase').value;
+  try {
+    const results = await api('/global/currencies/multi-price', 'POST', { amount, from_currency: base, to_currency: base });
+    document.getElementById('multiResult').innerHTML =
+      `<div class="result-box">` +
+      results.map(r => `<div class="currency-row"><span>${r.symbol} ${r.currency} — ${r.name}</span><span class="amt">${r.symbol}${r.amount.toLocaleString()}</span></div>`).join('') +
+      `</div>`;
+  } catch(e) {
+    document.getElementById('multiResult').innerHTML = `<p class="error">${e.message}</p>`;
+  }
+}
+
+async function doTaxLookup() {
+  const country = document.getElementById('taxCountry').value;
+  try {
+    const tax = await fetch(`/global/tax/${country}`).then(r => r.json());
+    document.getElementById('taxResult').innerHTML =
+      `<div class="result-box">` +
+      Object.entries(tax).map(([k,v]) => `<div class="currency-row"><span>${k.replace(/_/g,' ')}</span><span class="amt">${v}</span></div>`).join('') +
+      `</div>`;
+  } catch(e) {}
+}
+
+// ── Documents ─────────────────────────────────────────────────────────────────
+
+async function analyzeDoc() {
+  const type = document.getElementById('docType').value;
+  const name = document.getElementById('docName').value || type;
+  const content = document.getElementById('docContent').value;
+  if (!content.trim()) { showToast('Please paste document content.'); return; }
+  document.getElementById('docResult').innerHTML = '<p class="loading">Analysing…</p>';
+  try {
+    const r = await api('/global/analyze', 'POST', { document_type: type, document_name: name, content });
+    const flags = r.risk_flags || [];
+    const extracted = r.extracted_data || {};
+    document.getElementById('docResult').innerHTML = `
+      <div class="result-box">
+        <h4>Analysis Complete</h4>
+        <div style="font-size:.85rem;color:#94a3b8;margin-bottom:.75rem">${r.summary}</div>
+        ${Object.entries(extracted).map(([k,v]) =>
+          `<div class="currency-row"><span>${k.replace(/_/g,' ')}</span><span class="amt">${Array.isArray(v) ? v.join(', ') : v}</span></div>`
+        ).join('')}
+        ${flags.length ? `<div class="doc-flags"><div style="color:#f59e0b;font-size:.8rem;margin:.5rem 0">Risk Flags</div>${flags.map(f =>
+          `<div class="doc-flag"><span class="badge badge-${f.level}">${f.level}</span><span>${f.message}</span></div>`
+        ).join('')}</div>` : '<div style="color:#22c55e;font-size:.8rem;margin-top:.5rem">✓ No major risk flags detected</div>'}
+      </div>`;
+    loadDocHistory();
+  } catch(e) {
+    document.getElementById('docResult').innerHTML = `<p class="error">${e.message}</p>`;
+  }
+}
+
+async function loadDocHistory() {
+  const filter = document.getElementById('docFilter')?.value || '';
+  const url = filter ? `/global/documents?document_type=${filter}` : '/global/documents';
+  try {
+    const docs = await api(url);
+    document.getElementById('docHistory').innerHTML = docs.length
+      ? docs.map(d => `
+        <div class="reg-item">
+          <div class="reg-title">${d.document_name || d.document_type} <span class="badge badge-blue">${d.document_type}</span></div>
+          <div class="reg-desc">${d.summary?.slice(0,100) || '—'}…</div>
+          <div style="font-size:.75rem;color:#475569;margin-top:.25rem">${new Date(d.created_at).toLocaleString()}</div>
+        </div>`).join('')
+      : '<p class="loading">No documents analysed yet.</p>';
+  } catch(e) {}
+}
+
+// ── Insights ──────────────────────────────────────────────────────────────────
+
+async function loadInsights() {
+  try {
+    const d = await api('/global/insights');
+
+    document.getElementById('trendsList').innerHTML = d.industry_trends.map(t =>
+      `<div class="trend-item">
+        <div class="trend-title"><span class="badge badge-${t.impact === 'high' ? 'high' : t.impact === 'medium' ? 'medium' : 'low'}">${t.impact}</span> ${t.trend}</div>
+        <div class="trend-desc">${t.description}</div>
+        <div class="trend-action">→ ${t.action}</div>
+      </div>`).join('');
+
+    const swot = d.competitor_analysis;
+    document.getElementById('swotChart').innerHTML = `<div class="swot">
+      <div class="swot-cell"><h5>Strengths</h5><ul>${swot.strengths.map(s=>`<li>${s}</li>`).join('')}</ul></div>
+      <div class="swot-cell"><h5>Weaknesses</h5><ul>${swot.weaknesses.map(s=>`<li>${s}</li>`).join('')}</ul></div>
+      <div class="swot-cell"><h5>Opportunities</h5><ul>${swot.opportunities.map(s=>`<li>${s}</li>`).join('')}</ul></div>
+      <div class="swot-cell"><h5>Threats</h5><ul>${swot.threats.map(s=>`<li>${s}</li>`).join('')}</ul></div>
+    </div>`;
+
+    document.getElementById('oppsList').innerHTML = d.market_opportunities.map(o =>
+      `<div class="trend-item">
+        <div class="trend-title"><span class="badge badge-${o.priority === 'high' ? 'high' : 'medium'}">${o.priority}</span> ${o.title}</div>
+        <div class="trend-desc">${o.description}</div>
+        ${o.estimated_value > 0 ? `<div class="trend-action">Estimated value: ₱${o.estimated_value.toLocaleString()}</div>` : ''}
+      </div>`).join('');
+
+    document.getElementById('growthList').innerHTML = d.growth_recommendations.map(r =>
+      `<div class="trend-item">
+        <div class="trend-title"><span class="badge badge-${r.impact === 'high' ? 'high' : 'medium'}">${r.impact}</span> ${r.title}</div>
+        <div class="trend-desc">${r.description}</div>
+      </div>`).join('');
+
+  } catch(e) { console.error(e); }
+}
+
+// ── Regulations ───────────────────────────────────────────────────────────────
+
+async function loadCompliance() {
+  const country = document.getElementById('regCountry').value;
+  try {
+    const d = await api(`/global/regulations/compliance/${country}`);
+    document.getElementById('complianceList').innerHTML =
+      d.compliance_items.map(item =>
+        `<div class="checklist-item">
+          <span class="check-icon">${item.required ? '✅' : '⚪'}</span>
+          <div>
+            <div style="font-weight:600">${item.item} ${item.required ? '' : '<span style="color:#64748b">(optional)</span>'}</div>
+            <div class="check-desc">${item.description}</div>
+          </div>
+        </div>`
+      ).join('') || '<p class="loading">No checklist available.</p>';
+  } catch(e) {
+    document.getElementById('complianceList').innerHTML = `<p class="error">${e.message}</p>`;
+  }
+}
+
+async function loadRegulations() {
+  const country = document.getElementById('regFilterCountry').value;
+  const url = country ? `/global/regulations?country_code=${country}` : '/global/regulations';
+  try {
+    const regs = await fetch(url).then(r => r.json());
+    document.getElementById('regList').innerHTML = regs.length
+      ? regs.map(r =>
+        `<div class="reg-item">
+          <div class="reg-title">${r.title} <span class="badge badge-blue">${r.country_code}</span></div>
+          <div class="reg-desc">${r.description}</div>
+        </div>`).join('')
+      : '<p class="loading">No regulations found.</p>';
+  } catch(e) {}
+}
+
+// ── Assistants ────────────────────────────────────────────────────────────────
+
+async function askAssistant() {
+  const type = document.getElementById('assistType').value;
+  const question = document.getElementById('assistQ').value;
+  if (!question.trim()) { showToast('Please enter a question.'); return; }
+  document.getElementById('assistResult').innerHTML = '<p class="loading">Thinking…</p>';
+  try {
+    const r = await api('/global/assistant', 'POST', { assistant_type: type, question });
+    document.getElementById('assistResult').innerHTML = `
+      <div class="assistant-bubble">
+        <div class="q">You asked: ${r.question}</div>
+        <div class="a">${r.answer}</div>
+        ${r.disclaimer ? `<div class="disc">⚠ ${r.disclaimer}</div>` : ''}
+      </div>`;
+  } catch(e) {
+    document.getElementById('assistResult').innerHTML = `<p class="error">${e.message}</p>`;
+  }
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+if (!TOKEN) {
+  document.querySelectorAll('.loading').forEach(el => { el.textContent = 'Not logged in.'; });
+} else {
+  loadOverview();
+  loadTransHistory();
+  loadCurrencies();
+  loadDocHistory();
+  loadInsights();
+  loadCompliance();
+  loadRegulations();
+}
+</script>
+</body>
+</html>

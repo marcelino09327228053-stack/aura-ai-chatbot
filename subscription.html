@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MB Future Tech — AI Chatbot | Billing & Usage</title>
+<style>
+:root { --bg:#07120f; --panel:#0d211b; --line:#1d493b; --accent:#3cc68a; --muted:#91b4a7; --danger:#fb7185; --warning:#fbbf24; }
+* { box-sizing:border-box; }
+body { margin:0; min-height:100vh; padding:28px; color:#f4fff9; background:radial-gradient(circle at 50% 0,#12392c 0,transparent 38%),var(--bg); font:15px/1.5 Arial,sans-serif; }
+.wrap { max-width:1100px; margin:auto; }
+.header,.row { display:flex; align-items:center; justify-content:space-between; gap:16px; }
+.header { margin-bottom:24px; }
+.header h1 { margin:0; }
+.header-actions { display:flex; align-items:center; gap:9px; }
+.grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; }
+.plans { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px; }
+.card { background:rgba(13,33,27,.94); border:1px solid var(--line); border-radius:16px; padding:20px; box-shadow:0 18px 60px #0004; }
+.card.active { border-color:var(--accent); box-shadow:0 0 0 1px var(--accent),0 18px 60px #0004; }
+.wide { grid-column:1/-1; }
+.muted { color:var(--muted); }
+.metric { font-size:28px; font-weight:800; margin:4px 0; }
+.badge { display:inline-block; padding:5px 10px; border-radius:999px; background:#173c30; color:#65e5ad; font-size:12px; font-weight:700; }
+.notice { display:none; margin-bottom:16px; padding:14px 18px; border-radius:12px; border:1px solid var(--warning); background:#3b2d0b; color:#fde68a; }
+.notice.danger { border-color:var(--danger); background:#3b1119; color:#fecdd3; }
+button,.btn { display:inline-block; padding:10px 14px; border:0; border-radius:9px; background:var(--accent); color:#042016; cursor:pointer; font-weight:800; text-decoration:none; }
+.secondary { color:white; background:#18382f; border:1px solid var(--line); }
+button:disabled { opacity:.55; cursor:default; }
+table { width:100%; border-collapse:collapse; }
+th,td { padding:11px 8px; border-bottom:1px solid var(--line); text-align:left; }
+th { color:var(--muted); font-size:12px; text-transform:uppercase; }
+ul { padding-left:18px; color:var(--muted); }
+@media(max-width:760px){ body{padding:16px}.grid,.plans{grid-template-columns:1fr}.header{align-items:flex-start;flex-direction:column}.header-actions{width:100%}.wide{grid-column:auto}table{font-size:12px} }
+</style>
+<script src="/static/aura-notifications.js"></script>
+</head>
+<body>
+<main class="wrap">
+  <header class="header">
+    <div><h1>MB Future Tech AI Chatbot Billing & Usage</h1><div class="muted">Know what you paid, when it expires, and what you used.</div></div>
+    <div class="header-actions">
+      <button type="button" class="secondary" onclick="goBackToPreviousPage()" aria-label="Go back">← Back</button>
+    </div>
+  </header>
+
+  <div id="expiryNotice" class="notice"></div>
+
+  <section class="grid">
+    <article class="card">
+      <div class="row"><span class="muted">AI Chatbot subscription</span><span id="statusBadge" class="badge">Loading</span></div>
+      <div id="planName" class="metric">—</div>
+      <div id="expiryText" class="muted">Loading subscription details…</div>
+      <button id="renewButton" style="margin-top:16px" onclick="renewCurrent()">Renew subscription</button>
+    </article>
+    <article class="card">
+      <span class="muted">AI Chatbot usage today</span>
+      <div id="messageUsage" class="metric">—</div>
+      <div class="muted">AI provider charges are paid separately through your own provider account.</div>
+    </article>
+
+    <article class="card wide">
+      <h2>AI Chatbot plans</h2>
+      <div class="plans" id="planList"></div>
+    </article>
+
+    <article class="card wide">
+      <h2>Payment history</h2>
+      <div style="overflow:auto">
+        <table>
+          <thead><tr><th>Date</th><th>Description</th><th>Amount</th><th>Method</th><th>Status</th></tr></thead>
+          <tbody id="paymentRows"><tr><td colspan="5" class="muted">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </article>
+
+    <article class="card wide">
+      <h2>AI provider consumption</h2>
+      <p class="muted">Requests and tokens are tracked by MB Future Tech AI Chatbot. Monetary cost is an estimate only when provider pricing data is available; your provider billing page remains the official bill.</p>
+      <div style="overflow:auto">
+        <table>
+          <thead><tr><th>Provider</th><th>Requests</th><th>Input tokens</th><th>Output tokens</th><th>Estimated cost</th></tr></thead>
+          <tbody id="aiUsageRows"><tr><td colspan="5" class="muted">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </article>
+  </section>
+</main>
+
+<script>
+let currentSubscription = null;
+function goBackToPreviousPage() {
+  let canReturn = false;
+  try {
+    canReturn = !!document.referrer && new URL(document.referrer).origin === window.location.origin;
+  } catch (_) {}
+  if (canReturn && window.history.length > 1) {
+    window.history.back();
+  } else {
+    window.location.href = "/";
+  }
+}
+document.addEventListener("keydown", function(event) {
+  if (event.key === "Escape") {
+    event.preventDefault();
+    goBackToPreviousPage();
+  }
+});
+function authHeaders() {
+  const token=localStorage.getItem("aura_token");
+  if(!token){ location.href="/login"; return null; }
+  return {"Content-Type":"application/json","Authorization":"Bearer "+token};
+}
+function money(value){ return new Intl.NumberFormat("en-PH",{style:"currency",currency:"USD"}).format(Number(value||0)); }
+function dateText(value){ return value ? new Date(value).toLocaleString() : "No expiration"; }
+
+async function loadSubscription(){
+  const headers=authHeaders(); if(!headers)return;
+  const [subRes,plansRes]=await Promise.all([fetch("/subscription/status",{headers}),fetch("/subscription/plans")]);
+  if(subRes.status===401){ location.href="/login"; return; }
+  const data=await subRes.json(), plans=await plansRes.json();
+  currentSubscription=data.subscription;
+  const sub=data.subscription || {plan:"free",status:"active",days_remaining:null};
+  document.getElementById("planName").textContent=sub.plan.toUpperCase()+" PLAN";
+  document.getElementById("statusBadge").textContent=sub.status.toUpperCase();
+  document.getElementById("expiryText").textContent=sub.expires_at
+    ? `${sub.days_remaining} day(s) remaining • Expires ${dateText(sub.expires_at)}`
+    : "Free plan • No expiration";
+  document.getElementById("renewButton").style.display=sub.plan==="free"?"none":"inline-block";
+  document.getElementById("messageUsage").textContent=data.usage.messages_today+
+    (data.limits.max_messages_per_day===null?" messages":` / ${data.limits.max_messages_per_day}`);
+  if(data.notification){
+    const notice=document.getElementById("expiryNotice");
+    notice.style.display="block";
+    notice.className="notice "+(data.notification.level==="danger"?"danger":"");
+    notice.innerHTML=`<strong>${data.notification.message}</strong> <button onclick="renewCurrent()" style="margin-left:12px">${data.notification.action}</button>`;
+  }
+  document.getElementById("planList").innerHTML=plans.map(plan=>{
+    const active=plan.plan===sub.plan?"active":"";
+    const companies=plan.max_companies===null?"Unlimited":plan.max_companies;
+    const messages=plan.max_messages_per_day===null?"Unlimited":plan.max_messages_per_day;
+    const price=plan.price===null?"Contact us":plan.price===0?"Free":money(plan.price)+"/month";
+    return `<div class="card ${active}"><h3>${plan.plan.toUpperCase()}</h3><div class="metric">${price}</div>
+      <ul><li>${companies} companies</li><li>${messages} messages/day</li>${plan.plan!=="free"?"<li>30-day subscription period</li>":""}</ul>
+      ${active?`<button disabled>Current plan</button>`:`<button onclick="upgrade('${plan.plan}')">Select plan</button>`}</div>`;
+  }).join("");
+  const payments=data.payment_history||[];
+  document.getElementById("paymentRows").innerHTML=payments.length?payments.map(p=>
+    `<tr><td>${dateText(p.created_at)}</td><td>AI Chatbot subscription</td><td>${money(p.amount)}</td><td>${p.method}</td><td>${p.status}</td></tr>`
+  ).join(""):`<tr><td colspan="5" class="muted">No AI Chatbot payments recorded yet.</td></tr>`;
+  const providerUsage=data.ai_usage?.providers||[];
+  document.getElementById("aiUsageRows").innerHTML=providerUsage.length?providerUsage.map(item=>
+    `<tr><td>${item.provider}</td><td>${item.requests}</td><td>${item.input_tokens}</td><td>${item.output_tokens}</td><td>${item.estimated_cost===null?"Check provider":money(item.estimated_cost)}</td></tr>`
+  ).join(""):`<tr><td colspan="5" class="muted">No AI provider usage recorded yet.</td></tr>`;
+}
+async function upgrade(plan){
+  const res=await fetch("/subscription/upgrade",{method:"POST",headers:authHeaders(),body:JSON.stringify({plan})});
+  const data=await res.json();
+  if(!res.ok){showToast(data.detail||"Subscription update failed.");return}
+  await loadSubscription();
+}
+function renewCurrent(){ if(currentSubscription?.plan) upgrade(currentSubscription.plan); }
+loadSubscription();
+</script>
+</body>
+</html>

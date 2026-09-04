@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MB Future Tech — AI Chatbot | Global Commerce Network</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, sans-serif; background: #070b12; color: #e2e8f0; min-height: 100vh; }
+    header {
+      background: linear-gradient(135deg, #1e3a5f 0%, #0f766e 50%, #164e63 100%);
+      padding: 1.25rem 2rem; display: flex; align-items: center;
+      border-bottom: 1px solid #155e75;
+    }
+    header h1 { font-size: 1.4rem; font-weight: 700; flex: 1; }
+    header small { display: block; opacity: .7; font-size: .8rem; }
+    .header-nav a { color: #67e8f9; font-size: .85rem; text-decoration: none; margin-left: 1rem; }
+    .header-nav a:hover { color: #fff; }
+    main { max-width: 1280px; margin: 1.5rem auto; padding: 0 1.5rem; }
+    .tabs { display: flex; gap: .4rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+    .tab-btn { padding: .45rem 1rem; border-radius: 6px; border: 1px solid #155e75;
+      background: #0c1520; color: #67e8f9; cursor: pointer; font-size: .85rem; }
+    .tab-btn.active { background: #0891b2; color: #fff; border-color: #0891b2; }
+    .tab-panel { display: none; } .tab-panel.active { display: block; }
+    .grid { display: grid; gap: 1rem; }
+    .grid-2 { grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
+    .grid-3 { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
+    .card { background: #0c1520; border: 1px solid #155e75; border-radius: 10px; padding: 1.25rem; }
+    .card h3 { font-size: .95rem; font-weight: 600; margin-bottom: .75rem; color: #22d3ee; }
+    .kpi { text-align: center; }
+    .kpi .val { font-size: 1.5rem; font-weight: 700; color: #22d3ee; }
+    .kpi .lbl { font-size: .75rem; color: #64748b; margin-top: .2rem; }
+    .item { padding: .65rem 0; border-bottom: 1px solid #155e75; }
+    .item:last-child { border-bottom: none; }
+    .item-title { font-weight: 600; font-size: .875rem; }
+    .item-desc { font-size: .78rem; color: #94a3b8; }
+    .item-val { font-size: .8rem; color: #22d3ee; margin-top: .15rem; }
+    .form-row { display: flex; flex-wrap: wrap; gap: .6rem; margin-bottom: .75rem; }
+    .form-group { display: flex; flex-direction: column; gap: .3rem; flex: 1; min-width: 130px; }
+    .form-group label { font-size: .78rem; color: #67e8f9; }
+    .form-group input, .form-group select, .form-group textarea {
+      background: #070b12; border: 1px solid #155e75; color: #e2e8f0;
+      border-radius: 6px; padding: .45rem .7rem; font-size: .84rem;
+    }
+    .btn { display: inline-flex; padding: .45rem 1rem; border-radius: 6px; border: none;
+      font-size: .84rem; font-weight: 600; cursor: pointer; }
+    .btn-primary { background: #0891b2; color: #fff; }
+    .btn-sm { padding: .3rem .7rem; font-size: .78rem; }
+    .btn-outline { background: transparent; border: 1px solid #155e75; color: #67e8f9; }
+    .badge { display: inline-block; padding: .15rem .5rem; border-radius: 999px; font-size: .7rem; font-weight: 700; }
+    .badge-cyan { background: #164e63; color: #67e8f9; }
+    .badge-high { background: #7f1d1d; color: #fca5a5; }
+    .badge-medium { background: #78350f; color: #fcd34d; }
+    .badge-low { background: #14532d; color: #86efac; }
+    .badge-ok { background: #14532d; color: #86efac; }
+    .result-box { margin-top: .75rem; background: #070b12; border: 1px solid #155e75; border-radius: 8px; padding: 1rem; }
+    .result-row { display: flex; justify-content: space-between; padding: .3rem 0; border-bottom: 1px solid #0c1520; font-size: .83rem; }
+    .result-row:last-child { border-bottom: none; }
+    .result-val { color: #22d3ee; font-weight: 600; }
+    .loading { color: #475569; font-style: italic; font-size: .84rem; }
+    .error { color: #f87171; font-size: .83rem; }
+    .success { color: #22c55e; font-size: .83rem; }
+  </style>
+<script src="/static/aura-notifications.js"></script>
+</head>
+<body>
+<header>
+  <div style="flex:1">
+    <h1>🛒 MB Future Tech Global Commerce</h1>
+    <small>Marketplace · Logistics · Payments · Contracts · Analytics</small>
+  </div>
+  <nav class="header-nav">
+    <a href="/dashboard">Dashboard</a>
+    <a href="/economy">Economy</a>
+    <a href="/corporation">Corporation</a>
+  </nav>
+</header>
+<main>
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('overview')">Overview</button>
+    <button class="tab-btn" onclick="switchTab('products')">Marketplace</button>
+    <button class="tab-btn" onclick="switchTab('orders')">Orders</button>
+    <button class="tab-btn" onclick="switchTab('payments')">Payments</button>
+    <button class="tab-btn" onclick="switchTab('logistics')">Logistics</button>
+    <button class="tab-btn" onclick="switchTab('contracts')">Contracts</button>
+    <button class="tab-btn" onclick="switchTab('reports')">Reports</button>
+  </div>
+
+  <div class="tab-panel active" id="tab-overview">
+    <div class="grid grid-3" id="overviewKPIs" style="margin-bottom:1rem">
+      <div class="card kpi"><div class="val loading">…</div><div class="lbl">Listings</div></div>
+      <div class="card kpi"><div class="val loading">…</div><div class="lbl">Orders</div></div>
+      <div class="card kpi"><div class="val loading">…</div><div class="lbl">Revenue</div></div>
+    </div>
+    <div class="grid grid-2">
+      <div class="card"><h3>Marketplace</h3><div id="ovMarket"><p class="loading">Loading…</p></div></div>
+      <div class="card"><h3>Logistics</h3><div id="ovLogistics"><p class="loading">Loading…</p></div></div>
+      <div class="card"><h3>Payments</h3><div id="ovPayments"><p class="loading">Loading…</p></div></div>
+      <div class="card"><h3>Contracts</h3><div id="ovContracts"><p class="loading">Loading…</p></div></div>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="tab-products">
+    <div class="grid grid-2">
+      <div class="card">
+        <h3>Add Listing</h3>
+        <div class="form-row">
+          <div class="form-group"><label>Type</label>
+            <select id="listType"><option value="product">Product</option><option value="service">Service</option></select>
+          </div>
+          <div class="form-group"><label>Name</label><input id="listName" placeholder="Product name" /></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>Price</label><input type="number" id="listPrice" /></div>
+          <div class="form-group"><label>Stock</label><input type="number" id="listStock" value="10" /></div>
+          <div class="form-group"><label>Category</label><input id="listCat" value="general" /></div>
+        </div>
+        <div class="form-group" style="margin-bottom:.5rem"><label>Description</label><textarea id="listDesc" rows="2"></textarea></div>
+        <button class="btn btn-primary btn-sm" onclick="addListing()">Add Listing</button>
+        <div id="listMsg"></div>
+      </div>
+      <div class="card">
+        <h3>Catalogue</h3>
+        <div id="productList"><p class="loading">Loading…</p></div>
+      </div>
+      <div class="card">
+        <h3>Add Review</h3>
+        <div class="form-row">
+          <div class="form-group"><label>Product ID</label><input type="number" id="revPid" /></div>
+          <div class="form-group"><label>Customer</label><input id="revName" /></div>
+          <div class="form-group"><label>Rating</label><input type="number" id="revRating" min="1" max="5" value="5" /></div>
+        </div>
+        <div class="form-group" style="margin-bottom:.5rem"><label>Comment</label><input id="revComment" /></div>
+        <button class="btn btn-primary btn-sm" onclick="addReview()">Submit Review</button>
+        <div id="revMsg"></div>
+      </div>
+      <div class="card">
+        <h3>Recent Reviews</h3>
+        <div id="reviewList"><p class="loading">Loading…</p></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="tab-orders">
+    <div class="grid grid-2">
+      <div class="card">
+        <h3>Create Order</h3>
+        <div class="form-row">
+          <div class="form-group"><label>Customer</label><input id="ordCustomer" /></div>
+          <div class="form-group"><label>Email</label><input id="ordEmail" /></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>Item Name</label><input id="ordItem" /></div>
+          <div class="form-group"><label>Price</label><input type="number" id="ordPrice" /></div>
+          <div class="form-group"><label>Qty</label><input type="number" id="ordQty" value="1" /></div>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="createOrder()">Create Order</button>
+        <div id="ordMsg"></div>
+      </div>
+      <div class="card">
+        <h3>Orders</h3>
+        <div id="orderList"><p class="loading">Loading…</p></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="tab-payments">
+    <div class="grid grid-2">
+      <div class="card">
+        <h3>Process Payment</h3>
+        <div class="form-row">
+          <div class="form-group"><label>Amount</label><input type="number" id="payAmount" /></div>
+          <div class="form-group"><label>Order ID</label><input type="number" id="payOrderId" placeholder="optional" /></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>Method</label>
+            <select id="payMethod">
+              <option value="online">Online</option><option value="card">Card</option>
+              <option value="gcash">GCash</option><option value="bank_transfer">Bank Transfer</option>
+            </select>
+          </div>
+          <div class="form-group"><label>Email</label><input id="payEmail" /></div>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="processPayment()">Pay</button>
+        <div id="payMsg"></div>
+      </div>
+      <div class="card">
+        <h3>Subscription Billing</h3>
+        <div class="form-row">
+          <div class="form-group"><label>Customer</label><input id="subCustomer" /></div>
+          <div class="form-group"><label>Plan</label><input id="subPlan" placeholder="Pro Monthly" /></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>Amount</label><input type="number" id="subAmount" /></div>
+          <div class="form-group"><label>Cycle</label>
+            <select id="subCycle"><option value="monthly">Monthly</option><option value="annual">Annual</option></select>
+          </div>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="createSub()">Create Subscription</button>
+        <div id="subMsg"></div>
+      </div>
+      <div class="card">
+        <h3>Generate Invoice</h3>
+        <div class="form-row">
+          <div class="form-group"><label>Order ID</label><input type="number" id="invOrderId" /></div>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="genInvoice()">Generate</button>
+        <div id="invMsg"></div>
+      </div>
+      <div class="card">
+        <h3>Financial Records</h3>
+        <div id="finRecords"><p class="loading">Loading…</p></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="tab-logistics">
+    <div class="grid grid-2">
+      <div class="card">
+        <h3>Create Shipment</h3>
+        <div class="form-row">
+          <div class="form-group"><label>Order ID</label><input type="number" id="shipOrderId" /></div>
+          <div class="form-group"><label>Carrier</label><input id="shipCarrier" value="standard" /></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>Origin</label><input id="shipOrigin" /></div>
+          <div class="form-group"><label>Destination</label><input id="shipDest" /></div>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="createShipment()">Ship</button>
+        <div id="shipMsg"></div>
+      </div>
+      <div class="card">
+        <h3>Track / Update Delivery</h3>
+        <div class="form-row">
+          <div class="form-group"><label>Tracking #</label><input id="trackNum" /></div>
+          <div class="form-group"><label>Status</label>
+            <select id="trackStatus">
+              <option value="picked_up">Picked Up</option><option value="in_transit">In Transit</option>
+              <option value="out_for_delivery">Out for Delivery</option><option value="delivered">Delivered</option>
+            </select>
+          </div>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="trackShipment()">Track</button>
+        <button class="btn btn-outline btn-sm" onclick="updateDelivery()">Update Status</button>
+        <div id="trackMsg"></div>
+      </div>
+      <div class="card">
+        <h3>Warehouse</h3>
+        <div class="form-row">
+          <div class="form-group"><label>Name</label><input id="whName" placeholder="Main Warehouse" /></div>
+          <div class="form-group"><label>Location</label><input id="whLoc" /></div>
+          <div class="form-group"><label>Capacity</label><input type="number" id="whCap" value="1000" /></div>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="addWarehouse()">Add Warehouse</button>
+        <button class="btn btn-outline btn-sm" onclick="syncInventory()">Sync Inventory</button>
+        <div id="whMsg"></div>
+        <div id="whMonitor" style="margin-top:.75rem"></div>
+      </div>
+      <div class="card">
+        <h3>Shipments</h3>
+        <div id="shipmentList"><p class="loading">Loading…</p></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="tab-contracts">
+    <div class="grid grid-2">
+      <div class="card">
+        <h3>Create Contract</h3>
+        <div class="form-row">
+          <div class="form-group"><label>Template</label>
+            <select id="ctTemplate">
+              <option value="service">Service</option><option value="sales">Sales</option>
+              <option value="supplier">Supplier</option><option value="nda">NDA</option>
+            </select>
+          </div>
+          <div class="form-group"><label>Title (optional)</label><input id="ctTitle" /></div>
+        </div>
+        <div class="form-group" style="margin-bottom:.5rem"><label>Parties (comma-separated)</label><input id="ctParties" placeholder="MB Future Tech, Client Co" /></div>
+        <button class="btn btn-primary btn-sm" onclick="createContract()">Create</button>
+        <div id="ctMsg"></div>
+      </div>
+      <div class="card">
+        <h3>Renewal Reminders</h3>
+        <div id="renewals"><p class="loading">Loading…</p></div>
+      </div>
+      <div class="card" style="grid-column:1/-1">
+        <h3>Active Contracts</h3>
+        <div id="contractList"><p class="loading">Loading…</p></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="tab-reports">
+    <div class="card" style="margin-bottom:1rem">
+      <button class="btn btn-primary" onclick="loadReports()">Refresh Reports</button>
+    </div>
+    <div class="grid grid-2" id="reportsGrid">
+      <p class="loading">Loading…</p>
+    </div>
+  </div>
+</main>
+<script>
+const API = '';
+let TOKEN = localStorage.getItem('token') || '';
+async function api(path, method='GET', body=null) {
+  const opts = { method, headers: { 'Authorization': `Bearer ${TOKEN}`, 'Content-Type': 'application/json' } };
+  if (body) opts.body = JSON.stringify(body);
+  const r = await fetch(API + path, opts);
+  if (!r.ok) throw new Error((await r.json()).detail || r.statusText);
+  return r.json();
+}
+function fmt(n) { return typeof n === 'number' ? '₱' + n.toLocaleString(undefined,{maximumFractionDigits:2}) : (n ?? '—'); }
+function switchTab(name) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.getAttribute('onclick').includes(`'${name}'`)));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id === 'tab-' + name));
+}
+
+async function loadOverview() {
+  try {
+    const d = await api('/commerce/dashboard');
+    const kpis = document.querySelectorAll('#overviewKPIs .kpi');
+    kpis[0].querySelector('.val').textContent = d.marketplace?.total_listings ?? 0;
+    kpis[1].querySelector('.val').textContent = d.sales?.total_orders ?? 0;
+    kpis[2].querySelector('.val').textContent = fmt(d.sales?.total_revenue ?? 0);
+
+    document.getElementById('ovMarket').innerHTML = `
+      <div class="result-row"><span>Products</span><span class="result-val">${d.marketplace?.product_count}</span></div>
+      <div class="result-row"><span>Services</span><span class="result-val">${d.marketplace?.service_count}</span></div>
+      <div class="result-row"><span>Avg Rating</span><span class="result-val">${d.marketplace?.average_rating}/5</span></div>`;
+    document.getElementById('ovLogistics').innerHTML = `
+      <div class="result-row"><span>Shipments</span><span class="result-val">${d.logistics?.total_shipments}</span></div>
+      <div class="result-row"><span>In Transit</span><span class="result-val">${d.logistics?.in_transit}</span></div>
+      <div class="result-row"><span>Delivered</span><span class="result-val">${d.logistics?.delivered}</span></div>`;
+    document.getElementById('ovPayments').innerHTML = `
+      <div class="result-row"><span>Collected</span><span class="result-val">${fmt(d.payments?.total_collected)}</span></div>
+      <div class="result-row"><span>MRR</span><span class="result-val">${fmt(d.payments?.monthly_recurring_revenue)}</span></div>
+      <div class="result-row"><span>Pending</span><span class="result-val">${fmt(d.payments?.pending_amount)}</span></div>`;
+    document.getElementById('ovContracts').innerHTML = `
+      <div class="result-row"><span>Active</span><span class="result-val">${d.contracts?.active_contracts}</span></div>
+      <div class="result-row"><span>Pending Approval</span><span class="result-val">${d.contracts?.pending_approval}</span></div>
+      <div class="result-row"><span>Renewals Due</span><span class="result-val">${d.contracts?.renewals_due}</span></div>`;
+  } catch(e) { console.error(e); }
+}
+
+async function loadProducts() {
+  try {
+    const [products, reviews] = await Promise.all([api('/commerce/products'), api('/commerce/reviews')]);
+    document.getElementById('productList').innerHTML = products.map(p =>
+      `<div class="item"><div class="item-title">#${p.id} ${p.name} <span class="badge badge-cyan">${p.listing_type}</span></div>
+      <div class="item-desc">${fmt(p.price)} · stock ${p.stock} · ★ ${p.avg_rating} (${p.review_count})</div></div>`
+    ).join('') || '<p class="loading">No listings yet.</p>';
+    document.getElementById('reviewList').innerHTML = reviews.slice(0,8).map(r =>
+      `<div class="item"><div class="item-title">${r.customer_name} — ★${r.rating}</div>
+      <div class="item-desc">Product #${r.product_id}: ${r.comment || '—'}</div></div>`
+    ).join('') || '<p class="loading">No reviews yet.</p>';
+  } catch(e) {}
+}
+
+async function addListing() {
+  const body = {
+    listing_type: document.getElementById('listType').value,
+    name: document.getElementById('listName').value,
+    description: document.getElementById('listDesc').value,
+    price: parseFloat(document.getElementById('listPrice').value)||0,
+    stock: parseInt(document.getElementById('listStock').value)||0,
+    category: document.getElementById('listCat').value,
+  };
+  if (!body.name) return;
+  try {
+    await api('/commerce/products', 'POST', body);
+    document.getElementById('listMsg').innerHTML = '<span class="success">✓ Added</span>';
+    loadProducts(); loadOverview();
+  } catch(e) { document.getElementById('listMsg').innerHTML = `<span class="error">${e.message}</span>`; }
+}
+
+async function addReview() {
+  const body = {
+    product_id: parseInt(document.getElementById('revPid').value),
+    customer_name: document.getElementById('revName').value,
+    rating: parseInt(document.getElementById('revRating').value)||5,
+    comment: document.getElementById('revComment').value,
+  };
+  try {
+    await api('/commerce/reviews', 'POST', body);
+    document.getElementById('revMsg').innerHTML = '<span class="success">✓ Review added</span>';
+    loadProducts();
+  } catch(e) { document.getElementById('revMsg').innerHTML = `<span class="error">${e.message}</span>`; }
+}
+
+async function loadOrders() {
+  try {
+    const orders = await api('/commerce/orders');
+    document.getElementById('orderList').innerHTML = orders.map(o =>
+      `<div class="item"><div class="item-title">${o.order_number} <span class="badge badge-cyan">${o.status}</span></div>
+      <div class="item-desc">${o.customer_name} · ${fmt(o.total)} · payment: ${o.payment_status}</div>
+      <div class="item-val">ID: ${o.id}</div></div>`
+    ).join('') || '<p class="loading">No orders yet.</p>';
+  } catch(e) {}
+}
+
+async function createOrder() {
+  const body = {
+    customer_name: document.getElementById('ordCustomer').value,
+    customer_email: document.getElementById('ordEmail').value,
+    items: [{ name: document.getElementById('ordItem').value, price: parseFloat(document.getElementById('ordPrice').value)||0, quantity: parseInt(document.getElementById('ordQty').value)||1 }],
+  };
+  if (!body.customer_name || !body.items[0].name) return;
+  try {
+    const o = await api('/commerce/orders', 'POST', body);
+    document.getElementById('ordMsg').innerHTML = `<span class="success">✓ ${o.order_number} (ID ${o.id})</span>`;
+    loadOrders(); loadOverview();
+  } catch(e) { document.getElementById('ordMsg').innerHTML = `<span class="error">${e.message}</span>`; }
+}
+
+async function processPayment() {
+  const body = {
+    amount: parseFloat(document.getElementById('payAmount').value)||0,
+    order_id: parseInt(document.getElementById('payOrderId').value)||null,
+    method: document.getElementById('payMethod').value,
+    customer_email: document.getElementById('payEmail').value,
+  };
+  try {
+    const r = await api('/commerce/payments', 'POST', body);
+    document.getElementById('payMsg').innerHTML = `
+      <div class="result-box">
+        <div class="result-row"><span>Ref</span><span class="result-val">${r.payment_ref}</span></div>
+        <div class="result-row"><span>Status</span><span class="result-val">${r.status}</span></div>
+        <div class="result-row"><span>Fraud Risk</span><span class="result-val">${r.fraud?.risk_level} (${r.fraud?.fraud_score})</span></div>
+        <div class="item-desc">${r.message}</div>
+      </div>`;
+    loadPayments(); loadOverview();
+  } catch(e) { document.getElementById('payMsg').innerHTML = `<span class="error">${e.message}</span>`; }
+}
+
+async function createSub() {
+  const body = {
+    customer_name: document.getElementById('subCustomer').value,
+    plan_name: document.getElementById('subPlan').value,
+    amount: parseFloat(document.getElementById('subAmount').value)||0,
+    billing_cycle: document.getElementById('subCycle').value,
+  };
+  try {
+    await api('/commerce/payments/subscriptions', 'POST', body);
+    document.getElementById('subMsg').innerHTML = '<span class="success">✓ Subscription created</span>';
+    loadPayments();
+  } catch(e) { document.getElementById('subMsg').innerHTML = `<span class="error">${e.message}</span>`; }
+}
+
+async function genInvoice() {
+  const order_id = parseInt(document.getElementById('invOrderId').value);
+  try {
+    const inv = await api('/commerce/payments/invoice', 'POST', { order_id });
+    document.getElementById('invMsg').innerHTML = `<span class="success">✓ ${inv.invoice_number} — ${fmt(inv.total)}</span>`;
+    loadPayments();
+  } catch(e) { document.getElementById('invMsg').innerHTML = `<span class="error">${e.message}</span>`; }
+}
+
+async function loadPayments() {
+  try {
+    const r = await api('/commerce/payments/records');
+    document.getElementById('finRecords').innerHTML = `
+      <div class="result-row"><span>Collected</span><span class="result-val">${fmt(r.total_collected)}</span></div>
+      <div class="result-row"><span>Pending</span><span class="result-val">${fmt(r.pending_amount)}</span></div>
+      <div class="result-row"><span>MRR</span><span class="result-val">${fmt(r.monthly_recurring_revenue)}</span></div>
+      <div class="result-row"><span>Invoices</span><span class="result-val">${r.invoice_count}</span></div>
+      ${(r.recent_payments||[]).slice(0,5).map(p=>`<div class="item"><div class="item-title">${p.payment_ref}</div>
+      <div class="item-desc">${fmt(p.amount)} · ${p.status} · fraud ${p.fraud_score}</div></div>`).join('')}`;
+  } catch(e) {}
+}
+
+async function createShipment() {
+  const body = {
+    order_id: parseInt(document.getElementById('shipOrderId').value),
+    carrier: document.getElementById('shipCarrier').value,
+    origin: document.getElementById('shipOrigin').value,
+    destination: document.getElementById('shipDest').value,
+  };
+  try {
+    const s = await api('/commerce/logistics/shipments', 'POST', body);
+    document.getElementById('shipMsg').innerHTML = `<span class="success">✓ ${s.tracking_number}</span>`;
+    loadLogistics();
+  } catch(e) { document.getElementById('shipMsg').innerHTML = `<span class="error">${e.message}</span>`; }
+}
+
+async function trackShipment() {
+  const num = document.getElementById('trackNum').value;
+  try {
+    const s = await api(`/commerce/logistics/track/${num}`);
+    document.getElementById('trackMsg').innerHTML = `
+      <div class="result-box">
+        <div class="result-row"><span>Status</span><span class="result-val">${s.status}</span></div>
+        <div class="result-row"><span>ETA</span><span class="result-val">${s.estimated_delivery}</span></div>
+        ${(s.timeline||[]).map(t=>`<div class="item-desc">${t.current?'▶':t.completed?'✓':'○'} ${t.status}</div>`).join('')}
+      </div>`;
+  } catch(e) { document.getElementById('trackMsg').innerHTML = `<span class="error">${e.message}</span>`; }
+}
+
+async function updateDelivery() {
+  const body = { tracking_number: document.getElementById('trackNum').value, status: document.getElementById('trackStatus').value };
+  try {
+    await api('/commerce/logistics/delivery', 'PATCH', body);
+    document.getElementById('trackMsg').innerHTML = '<span class="success">✓ Status updated</span>';
+    loadLogistics();
+  } catch(e) { document.getElementById('trackMsg').innerHTML = `<span class="error">${e.message}</span>`; }
+}
+
+async function addWarehouse() {
+  const body = { name: document.getElementById('whName').value, location: document.getElementById('whLoc').value, capacity: parseInt(document.getElementById('whCap').value)||1000 };
+  if (!body.name) return;
+  try {
+    await api('/commerce/logistics/warehouses', 'POST', body);
+    document.getElementById('whMsg').innerHTML = '<span class="success">✓ Warehouse added</span>';
+    loadLogistics();
+  } catch(e) { document.getElementById('whMsg').innerHTML = `<span class="error">${e.message}</span>`; }
+}
+
+async function syncInventory() {
+  try {
+    const r = await api('/commerce/logistics/sync', 'POST');
+    document.getElementById('whMsg').innerHTML = `<span class="success">✓ ${r.message}</span>`;
+    loadLogistics(); loadProducts();
+  } catch(e) { document.getElementById('whMsg').innerHTML = `<span class="error">${e.message}</span>`; }
+}
+
+async function loadLogistics() {
+  try {
+    const [ships, wh] = await Promise.all([
+      api('/commerce/logistics/shipments'),
+      api('/commerce/logistics/warehouses'),
+    ]);
+    document.getElementById('shipmentList').innerHTML = ships.map(s =>
+      `<div class="item"><div class="item-title">${s.tracking_number} <span class="badge badge-cyan">${s.status}</span></div>
+      <div class="item-desc">${s.origin || '—'} → ${s.destination || '—'} · ETA ${s.estimated_delivery}</div></div>`
+    ).join('') || '<p class="loading">No shipments.</p>';
+    document.getElementById('whMonitor').innerHTML = `
+      <div class="result-row"><span>Utilization</span><span class="result-val">${wh.utilization_pct}%</span></div>
+      <div class="result-row"><span>Stock / Capacity</span><span class="result-val">${wh.total_stock} / ${wh.total_capacity}</span></div>
+      ${(wh.alerts||[]).map(a=>`<div class="item-desc">⚠ ${a}</div>`).join('')}`;
+  } catch(e) {}
+}
+
+async function createContract() {
+  const parties = document.getElementById('ctParties').value.split(',').map(s=>s.trim()).filter(Boolean);
+  const body = {
+    template_type: document.getElementById('ctTemplate').value,
+    parties,
+    custom_title: document.getElementById('ctTitle').value,
+  };
+  try {
+    const c = await api('/commerce/contracts', 'POST', body);
+    document.getElementById('ctMsg').innerHTML = `<span class="success">✓ Contract #${c.id} created</span>`;
+    loadContracts();
+  } catch(e) { document.getElementById('ctMsg').innerHTML = `<span class="error">${e.message}</span>`; }
+}
+
+async function approveContract(id) {
+  try {
+    await api(`/commerce/contracts/${id}/approve`, 'POST');
+    loadContracts();
+  } catch(e) { showToast(e.message); }
+}
+
+async function archiveContract(id) {
+  try {
+    await api(`/commerce/contracts/${id}/archive`, 'POST');
+    loadContracts();
+  } catch(e) { showToast(e.message); }
+}
+
+async function loadContracts() {
+  try {
+    const [contracts, renewals] = await Promise.all([
+      api('/commerce/contracts'),
+      api('/commerce/contracts/renewals'),
+    ]);
+    document.getElementById('contractList').innerHTML = contracts.map(c =>
+      `<div class="item"><div class="item-title">${c.title} <span class="badge badge-cyan">${c.status}</span></div>
+      <div class="item-desc">${c.template_type} · renew ${c.renewal_date || '—'} · parties: ${(c.parties||[]).join(', ')}</div>
+      ${c.status==='draft'?`<button class="btn btn-primary btn-sm" onclick="approveContract(${c.id})">Approve</button>`:''}
+      <button class="btn btn-outline btn-sm" onclick="archiveContract(${c.id})">Archive</button></div>`
+    ).join('') || '<p class="loading">No contracts.</p>';
+    document.getElementById('renewals').innerHTML = renewals.map(r =>
+      `<div class="item"><div class="item-title">${r.title} <span class="badge badge-${r.urgency}">${r.days_until_renewal}d</span></div></div>`
+    ).join('') || '<p class="loading">No upcoming renewals.</p>';
+  } catch(e) {}
+}
+
+async function loadReports() {
+  document.getElementById('reportsGrid').innerHTML = '<p class="loading">Loading…</p>';
+  try {
+    const r = await api('/commerce/reports');
+    document.getElementById('reportsGrid').innerHTML = `
+      <div class="card"><h3>Sales Performance</h3>
+        <div class="result-row"><span>Orders</span><span class="result-val">${r.sales_performance?.total_orders}</span></div>
+        <div class="result-row"><span>Revenue</span><span class="result-val">${fmt(r.sales_performance?.total_revenue)}</span></div>
+        <div class="result-row"><span>AOV</span><span class="result-val">${fmt(r.sales_performance?.average_order_value)}</span></div>
+        <div class="result-row"><span>Conversion</span><span class="result-val">${r.sales_performance?.conversion_rate_pct}%</span></div>
+      </div>
+      <div class="card"><h3>Customer Behavior</h3>
+        <div class="result-row"><span>Unique Customers</span><span class="result-val">${r.customer_behavior?.unique_customers}</span></div>
+        <div class="result-row"><span>Repeat</span><span class="result-val">${r.customer_behavior?.repeat_customers}</span></div>
+        <div class="result-row"><span>Avg Rating</span><span class="result-val">${r.customer_behavior?.average_review_rating}/5</span></div>
+        ${(r.customer_behavior?.insights||[]).map(i=>`<div class="item-desc">• ${i}</div>`).join('')}
+      </div>
+      <div class="card"><h3>Market Trends</h3>
+        ${(r.market_trends?.trends||[]).map(t=>`<div class="item-desc">→ ${t}</div>`).join('')}
+        ${(r.market_trends?.top_demanded_products||[]).map(p=>`<div class="item"><div class="item-title">${p.product}</div><div class="item-val">${p.units} units</div></div>`).join('')}
+      </div>
+      <div class="card"><h3>Revenue Report</h3>
+        <div class="result-row"><span>Order Revenue</span><span class="result-val">${fmt(r.revenue?.order_revenue)}</span></div>
+        <div class="result-row"><span>Collected</span><span class="result-val">${fmt(r.revenue?.collected_payments)}</span></div>
+        <div class="result-row"><span>MRR</span><span class="result-val">${fmt(r.revenue?.monthly_recurring_revenue)}</span></div>
+        <div class="item-desc">${r.revenue?.summary||''}</div>
+      </div>`;
+  } catch(e) { document.getElementById('reportsGrid').innerHTML = `<p class="error">${e.message}</p>`; }
+}
+
+if (!TOKEN) {
+  document.querySelectorAll('.loading').forEach(el => { el.textContent = 'Not logged in.'; });
+} else {
+  loadOverview(); loadProducts(); loadOrders(); loadPayments(); loadLogistics(); loadContracts(); loadReports();
+}
+</script>
+</body>
+</html>

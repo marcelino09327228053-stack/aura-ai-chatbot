@@ -1,0 +1,1 @@
+"""Global business insights module."""

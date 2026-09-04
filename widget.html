@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MB Future Tech — AI Chatbot | Website Widget</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#0f172a;color:#e5e7eb;font:15px Arial;padding:28px}
+.wrap{max-width:860px;margin:auto}.top{display:flex;justify-content:space-between;align-items:center}.card{background:#1e293b;border:1px solid #334155;border-radius:14px;padding:22px;margin:18px 0}
+label{display:block;margin:14px 0 6px;color:#cbd5e1}input,select,textarea{width:100%;padding:11px;border:1px solid #475569;border-radius:8px;background:#0f172a;color:white}
+textarea{min-height:90px;resize:vertical}button,.btn{border:0;border-radius:8px;padding:10px 15px;background:#7c3aed;color:white;font-weight:bold;cursor:pointer;text-decoration:none}
+.muted{color:#94a3b8}.row{display:grid;grid-template-columns:1fr 1fr;gap:14px}code{display:block;padding:14px;background:#020617;border-radius:8px;overflow:auto;white-space:pre-wrap;word-break:break-all}
+@media(max-width:650px){.row{grid-template-columns:1fr}.top{align-items:flex-start;gap:15px;flex-direction:column}}
+</style>
+<script src="/static/aura-notifications.js"></script>
+</head>
+<body>
+<main class="wrap">
+  <div class="top"><div><h1>Website Widget</h1><p class="muted">Customize your AI Chatbot, then paste the embed code before your website's closing body tag.</p></div><a class="btn" href="/dashboard">Dashboard</a></div>
+  <section class="card">
+    <label><input id="enabled" type="checkbox" style="width:auto"> Widget enabled</label>
+    <div class="row">
+      <div><label for="title">Title</label><input id="title" maxlength="80"></div>
+      <div><label for="color">Primary color</label><input id="color" type="color"></div>
+    </div>
+    <label for="welcome">Welcome message</label><textarea id="welcome" maxlength="300"></textarea>
+    <label for="position">Screen position</label><select id="position"><option value="right">Right</option><option value="left">Left</option></select>
+    <label for="domains">Allowed domains <span class="muted">(one hostname per line; leave blank to allow all)</span></label>
+    <textarea id="domains" placeholder="example.com&#10;shop.example.com"></textarea>
+    <p><button onclick="save()">Save settings</button> <button onclick="rotate()" style="background:#b91c1c">Rotate public token</button></p>
+    <p id="status" class="muted"></p>
+  </section>
+  <section class="card"><h2>Embed code</h2><code id="embed">Loading…</code><p><button onclick="copyEmbed()">Copy embed code</button></p></section>
+  <section class="card"><h2>Last 30 days</h2><div id="analytics" class="muted">Loading analytics…</div></section>
+</main>
+<script>
+let settings;
+function headers(){const token=localStorage.getItem("aura_token");if(!token){location.href="/login";return null}const h={"Content-Type":"application/json","Authorization":"Bearer "+token};const company=localStorage.getItem("aura_company_id");if(company)h["X-Company-Id"]=company;return h}
+async function load(){const r=await fetch("/widget/settings",{headers:headers()});if(r.status===401)return location.href="/login";settings=await r.json();enabled.checked=settings.enabled;title.value=settings.title;welcome.value=settings.welcome_message;color.value=settings.primary_color;position.value=settings.position;domains.value=(settings.allowed_domains||[]).join("\\n");render();loadAnalytics()}
+function render(){embed.textContent='<script src="'+location.origin+'/static/aura-widget.js" data-token="'+settings.public_token+'" async><\\/script>'}
+async function save(){const r=await fetch("/widget/settings",{method:"PUT",headers:headers(),body:JSON.stringify({enabled:enabled.checked,title:title.value,welcome_message:welcome.value,primary_color:color.value,position:position.value,allowed_domains:domains.value.split(/\\r?\\n/).map(x=>x.trim()).filter(Boolean)})});const data=await r.json();if(!r.ok)return status.textContent=data.detail||"Unable to save.";settings=data;status.textContent="Settings saved.";render()}
+async function rotate(){const r=await fetch("/widget/token/rotate",{method:"POST",headers:headers()});settings=await r.json();status.textContent="Token rotated. Update your website embed code.";showToast("Token rotated. Update your website embed code.");render()}
+async function copyEmbed(){await navigator.clipboard.writeText(embed.textContent);status.textContent="Embed code copied."}
+async function loadAnalytics(){const r=await fetch("/widget/analytics",{headers:headers()});if(!r.ok)return;const a=await r.json();analytics.innerHTML=`<b>${a.widget_loads}</b> loads · <b>${a.conversations}</b> conversations · <b>${a.messages}</b> messages · <b>${a.unanswered_count}</b> unanswered<br><br><b>Top questions</b><br>${a.top_questions.map(x=>x.count+"× "+escapeHtml(x.question)).join("<br>")||"No questions yet."}<br><br><b>Needs an FAQ</b><br>${a.unanswered_questions.map(x=>x.count+"× "+escapeHtml(x.question)).join("<br>")||"No unanswered questions."}`}
+function escapeHtml(s){const d=document.createElement("div");d.textContent=s;return d.innerHTML}
+load();
+</script>
+</body>
+</html>

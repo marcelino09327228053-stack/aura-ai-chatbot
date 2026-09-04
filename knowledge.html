@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MB Future Tech — AI Chatbot | Knowledge Base</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#0f172a;color:#e5e7eb;font:15px Arial;padding:28px}.wrap{max-width:960px;margin:auto}.top,.actions{display:flex;justify-content:space-between;align-items:center;gap:12px}.card{background:#1e293b;border:1px solid #334155;border-radius:14px;padding:22px;margin:18px 0}
+button,.btn,input{border:0;border-radius:8px;padding:10px 14px;font:inherit}.btn,button{background:#7c3aed;color:white;font-weight:bold;cursor:pointer;text-decoration:none}.danger{background:#b91c1c}input{background:#0f172a;color:white;border:1px solid #475569}.search{width:min(100%,500px)}.item{padding:14px 0;border-bottom:1px solid #334155}.muted{color:#94a3b8}.result{padding:12px;background:#0f172a;border-radius:8px;margin:10px 0;white-space:pre-wrap}.empty{text-align:center;padding:30px;color:#94a3b8}
+@media(max-width:650px){.top,.actions{align-items:flex-start;flex-direction:column}}
+</style><script src="/static/aura-notifications.js"></script>
+</head><body><main class="wrap">
+<div class="top"><div><h1>Knowledge Base</h1><p class="muted">Upload company information that the AI Chatbot can use when answering.</p></div><a class="btn" href="/dashboard">Dashboard</a></div>
+<section class="card"><h2>Upload document</h2><p class="muted">PDF, Word, Excel, PowerPoint, text, or common images; maximum 10 MB.</p><input id="file" type="file" accept=".pdf,.docx,.xlsx,.pptx,.txt,.md,.csv,.html,.htm,.png,.jpg,.jpeg,.webp,.bmp,.tif,.tiff"> <button onclick="upload()">Upload</button><p id="status" class="muted"></p></section>
+<section class="card"><div class="actions"><h2>Documents</h2><button onclick="loadDocuments()">Refresh</button></div><div id="documents">Loading…</div></section>
+<section class="card"><h2>Test knowledge search</h2><div class="actions"><input class="search" id="query" placeholder="Ask about your uploaded information"><button onclick="searchKnowledge()">Search</button></div><div id="results"></div></section>
+</main><script>
+function headers(json=false){const t=localStorage.getItem("aura_token");if(!t){location.href="/login";return null}const h={Authorization:"Bearer "+t};const c=localStorage.getItem("aura_company_id");if(c)h["X-Company-Id"]=c;if(json)h["Content-Type"]="application/json";return h}
+function esc(v){const d=document.createElement("div");d.textContent=v;return d.innerHTML}
+async function loadDocuments(){const r=await fetch("/knowledge/documents",{headers:headers()});if(r.status===401)return location.href="/login";const rows=await r.json();documents.innerHTML=rows.length?rows.map(x=>`<div class="item"><b>${esc(x.name)}</b><div class="muted">${x.chunk_count} searchable sections · ${Math.ceil(x.size_bytes/1024)} KB · ${esc(x.created_at)}</div><p><button class="danger" onclick="removeDocument(${x.id})">Delete</button></p></div>`).join(""):'<div class="empty">No documents uploaded yet.</div>'}
+async function upload(){if(!file.files[0])return status.textContent="Choose a document first.";const form=new FormData();form.append("file",file.files[0]);status.textContent="Uploading…";const r=await fetch("/knowledge/documents",{method:"POST",headers:headers(),body:form});const data=await r.json();if(!r.ok)return status.textContent=data.detail||"Upload failed.";status.textContent=data.name+" is ready.";file.value="";loadDocuments()}
+async function removeDocument(id){await fetch("/knowledge/documents/"+id,{method:"DELETE",headers:headers()});showToast("Document deleted.");loadDocuments()}
+async function searchKnowledge(){const q=query.value.trim();if(!q)return;const r=await fetch("/knowledge/search?q="+encodeURIComponent(q),{headers:headers()});const rows=await r.json();results.innerHTML=rows.length?rows.map(x=>`<div class="result"><b>${esc(x.document_name)}</b> · score ${x.score}<br>${esc(x.content)}</div>`).join(""):'<p class="muted">No matching knowledge found.</p>'}
+loadDocuments();
+</script></body></html>

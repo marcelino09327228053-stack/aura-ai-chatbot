@@ -1,0 +1,7 @@
+{
+    "name": "PDF Generator",
+    "version": "1.0.0",
+    "author": "Aura",
+    "description": "Generate business report summaries for PDF export.",
+    "permissions": ["generate_reports", "read_company_profile"]
+}

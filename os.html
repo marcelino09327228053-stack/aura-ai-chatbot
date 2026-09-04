@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>MB Future Tech — AI Chatbot | OS</title>
+<style>
+* { box-sizing: border-box; }
+body { font-family: Arial; background: #0f172a; color: white; margin: 0; padding: 20px; }
+.header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+.card { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 20px; margin-bottom: 16px; }
+button, .btn { padding: 10px 14px; border: none; border-radius: 8px; background: #3b82f6; color: white; cursor: pointer; font-weight: bold; text-decoration: none; display: inline-block; margin-right: 8px; margin-bottom: 8px; }
+.btn-secondary { background: #334155; }
+.widgets { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; }
+.widget { background: #334155; border-radius: 8px; padding: 16px; text-align: center; }
+.widget-value { font-size: 22px; font-weight: bold; margin-top: 8px; }
+.item { background: #334155; border-radius: 8px; padding: 12px; margin-bottom: 8px; font-size: 13px; }
+input { padding: 10px; border: none; border-radius: 8px; background: #0f172a; color: white; width: 100%; margin-bottom: 8px; }
+.tag { display: inline-block; background: #1e293b; border-radius: 4px; padding: 2px 8px; font-size: 12px; margin-right: 4px; }
+</style>
+<script src="/static/aura-notifications.js"></script>
+</head>
+<body>
+<div class="header">
+  <h1>🖥️ MB Future Tech AI Chatbot OS</h1>
+  <div>
+    <a href="/dashboard" class="btn btn-secondary">Dashboard</a>
+    <a href="/portal" class="btn btn-secondary">Cloud Portal</a>
+    <button class="btn-secondary" onclick="logout()">Logout</button>
+  </div>
+</div>
+
+<div class="card">
+  <h2 style="margin-top:0;">AI Health</h2>
+  <div id="healthStatus" style="color:#94a3b8;">Loading...</div>
+  <div class="widgets" id="healthGrid"></div>
+</div>
+
+<div class="card">
+  <h2 style="margin-top:0;">Active Agents</h2>
+  <div id="agentList"></div>
+</div>
+
+<div class="card">
+  <h2 style="margin-top:0;">Submit Task (auto-route)</h2>
+  <input id="taskText" placeholder="Describe your task...">
+  <button onclick="submitTask()">Run Task</button>
+</div>
+
+<div class="card">
+  <h2 style="margin-top:0;">Workflows</h2>
+  <div id="workflowTemplates"></div>
+  <h3>Running</h3>
+  <div id="runningWorkflows"></div>
+</div>
+
+<div class="card">
+  <h2 style="margin-top:0;">Agent Communication</h2>
+  <button onclick="sendComm('support','sales')">Support → Sales</button>
+  <button onclick="sendComm('hr','accounting')" class="btn-secondary">HR → Accounting</button>
+  <button onclick="sendComm('marketing','inventory')" class="btn-secondary">Marketing → Inventory</button>
+  <div id="commLog" style="margin-top:12px;"></div>
+</div>
+
+<div class="card">
+  <h2 style="margin-top:0;">Memory & Knowledge</h2>
+  <div id="memoryInfo"></div>
+  <button onclick="runLearning()">Learn from FAQs & Conversations</button>
+  <button onclick="runAutomation('daily_report')" class="btn-secondary">Run Daily Report</button>
+</div>
+
+<script>
+function authHeaders() {
+  const token = localStorage.getItem("aura_token");
+  if (!token) { window.location.href = "/login"; return null; }
+  return { "Content-Type": "application/json", "Authorization": "Bearer " + token };
+}
+
+function escapeHtml(t) {
+  return String(t).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+}
+
+function logout() {
+  localStorage.removeItem("aura_token");
+  window.location.href = "/login";
+}
+
+async function loadOS() {
+  const headers = authHeaders();
+  if (!headers) return;
+
+  const res = await fetch("/os/dashboard", { headers });
+  if (!res.ok) {
+    document.getElementById("healthStatus").textContent = "OS unavailable. Set AGENTS_ENABLED=true.";
+    return;
+  }
+  const data = await res.json();
+
+  document.getElementById("healthStatus").textContent =
+    "Role: " + data.permissions_role + " | OS " + (data.os_enabled ? "enabled" : "disabled");
+
+  const h = data.ai_health;
+  document.getElementById("healthGrid").innerHTML = `
+    <div class="widget"><div style="color:#94a3b8;font-size:13px;">CPU</div><div class="widget-value">${h.cpu_percent}%</div></div>
+    <div class="widget"><div style="color:#94a3b8;font-size:13px;">Memory</div><div class="widget-value">${h.memory_percent}%</div></div>
+    <div class="widget"><div style="color:#94a3b8;font-size:13px;">Messages</div><div class="widget-value">${h.messages_today}</div></div>
+    <div class="widget"><div style="color:#94a3b8;font-size:13px;">LTM</div><div class="widget-value">${data.memory_usage.total}</div></div>
+  `;
+
+  document.getElementById("agentList").innerHTML = data.agent_status.map(function(a) {
+    return `<div class="item">
+      <strong>${escapeHtml(a.name)}</strong>
+      <span class="tag">${a.enabled ? 'ON' : 'OFF'}</span>
+      <span class="tag">${a.pending_jobs} pending</span>
+      <span class="tag">${a.active_jobs} active</span>
+    </div>`;
+  }).join("");
+
+  document.getElementById("runningWorkflows").innerHTML = data.running_workflows.length
+    ? data.running_workflows.map(function(w) {
+        return `<div class="item">${escapeHtml(w.name)} — step ${w.current_step} [${w.status}]</div>`;
+      }).join("")
+    : "<p style='color:#94a3b8;'>No running workflows.</p>";
+
+  const m = data.memory_usage;
+  document.getElementById("memoryInfo").innerHTML =
+    "Long-term memory: <strong>" + m.total + "</strong> entries" +
+    (m.by_type ? " — " + JSON.stringify(m.by_type) : "");
+
+  const tRes = await fetch("/os/workflows/templates", { headers });
+  if (tRes.ok) {
+    const templates = await tRes.json();
+    document.getElementById("workflowTemplates").innerHTML = templates.map(function(t) {
+      return `<button class="btn-secondary" onclick="startWorkflow('${t.key}')">${escapeHtml(t.name)}</button>`;
+    }).join("");
+  }
+
+  const cRes = await fetch("/os/communication", { headers });
+  if (cRes.ok) {
+    const msgs = await cRes.json();
+    document.getElementById("commLog").innerHTML = msgs.slice(0, 8).map(function(m) {
+      return `<div class="item">${escapeHtml(m.from_agent)} → ${escapeHtml(m.to_agent)}: ${escapeHtml(m.message)}</div>`;
+    }).join("") || "<p style='color:#94a3b8;'>No messages.</p>";
+  }
+}
+
+async function submitTask() {
+  const headers = authHeaders();
+  if (!headers) return;
+  const text = document.getElementById("taskText").value.trim();
+  if (!text) return;
+  const res = await fetch("/os/tasks", {
+    method: "POST", headers, body: JSON.stringify({ text: text, task_type: "auto" })
+  });
+  const data = await res.json();
+  if (!res.ok) { showToast(data.detail || "Task failed."); return; }
+  showToast("Agent: " + data.result.agent + "\n\n" + data.result.reply);
+  loadOS();
+}
+
+async function startWorkflow(key) {
+  const headers = authHeaders();
+  if (!headers) return;
+  const res = await fetch("/os/workflows", {
+    method: "POST", headers, body: JSON.stringify({ workflow_key: key })
+  });
+  if (!res.ok) { showToast("Workflow failed."); return; }
+  loadOS();
+}
+
+async function sendComm(from, to) {
+  const headers = authHeaders();
+  if (!headers) return;
+  const res = await fetch("/os/communication", {
+    method: "POST", headers, body: JSON.stringify({ from_agent: from, to_agent: to })
+  });
+  if (!res.ok) { showToast("Communication failed."); return; }
+  loadOS();
+}
+
+async function runLearning() {
+  const headers = authHeaders();
+  if (!headers) return;
+  const res = await fetch("/os/knowledge/learn", { method: "POST", headers });
+  const data = await res.json();
+  showToast("Learned: " + data.conversations_learned + " conversations, " + data.faqs_learned + " FAQs");
+  loadOS();
+}
+
+async function runAutomation(key) {
+  const headers = authHeaders();
+  if (!headers) return;
+  await fetch("/os/automation/" + key + "/run", { method: "POST", headers });
+  loadOS();
+}
+
+loadOS();
+</script>
+</body>
+</html>

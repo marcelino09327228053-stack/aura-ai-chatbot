@@ -1,0 +1,832 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MB Future Tech — AI Chatbot | Enterprise Dashboard</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, sans-serif; background: #080c14; color: #e2e8f0; min-height: 100vh; }
+
+    header {
+      background: linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #1e3a5f 100%);
+      padding: 1.25rem 2rem; display: flex; align-items: center;
+    }
+    header h1 { font-size: 1.4rem; font-weight: 700; flex: 1; }
+    header small { display: block; opacity: .7; font-size: .82rem; }
+    .header-nav a { color: #a5b4fc; font-size: .85rem; text-decoration: none; margin-left: 1rem; }
+    .header-nav a:hover { color: #fff; }
+
+    main { max-width: 1280px; margin: 2rem auto; padding: 0 1.5rem; }
+
+    .tabs { display: flex; gap: .4rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+    .tab-btn {
+      padding: .48rem 1.1rem; border-radius: 6px; border: 1px solid #312e81;
+      background: #13193a; color: #a5b4fc; cursor: pointer; font-size: .875rem;
+      transition: all .18s;
+    }
+    .tab-btn.active { background: #4f46e5; color: #fff; border-color: #4f46e5; }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    .grid { display: grid; gap: 1rem; }
+    .grid-2 { grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
+    .grid-3 { grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+    .grid-4 { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
+
+    .card {
+      background: #13193a; border: 1px solid #1e2a5e; border-radius: 10px; padding: 1.25rem;
+    }
+    .card h3 { font-size: .95rem; font-weight: 600; margin-bottom: .75rem; color: #818cf8; }
+
+    /* Health score */
+    .health-ring {
+      display: flex; flex-direction: column; align-items: center; padding: 1rem;
+    }
+    .score-circle {
+      width: 110px; height: 110px; border-radius: 50%;
+      background: conic-gradient(#4f46e5 var(--pct), #1e2a5e 0);
+      display: flex; align-items: center; justify-content: center;
+      position: relative; margin-bottom: .75rem;
+    }
+    .score-inner {
+      width: 80px; height: 80px; border-radius: 50%; background: #13193a;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+    }
+    .score-inner .num { font-size: 1.5rem; font-weight: 700; color: #a5b4fc; }
+    .score-inner .grade { font-size: .9rem; font-weight: 700; color: #818cf8; }
+    .dim-bar { margin-bottom: .4rem; }
+    .dim-label { display: flex; justify-content: space-between; font-size: .78rem; color: #94a3b8; margin-bottom: .2rem; }
+    .bar-track { height: 6px; background: #1e2a5e; border-radius: 3px; }
+    .bar-fill { height: 6px; border-radius: 3px; background: linear-gradient(90deg,#4f46e5,#818cf8); }
+
+    /* KPI cards */
+    .kpi-card { text-align: center; padding: .75rem; }
+    .kpi-card .val { font-size: 1.5rem; font-weight: 700; color: #818cf8; }
+    .kpi-card .name { font-size: .78rem; color: #64748b; margin-top: .2rem; }
+    .kpi-card .target { font-size: .72rem; color: #475569; }
+    .kpi-card .trend-up { color: #22c55e; }
+    .kpi-card .trend-down { color: #f87171; }
+    .kpi-card .trend-stable { color: #94a3b8; }
+
+    /* Goal progress */
+    .goal-item { padding: .75rem 0; border-bottom: 1px solid #1e2a5e; }
+    .goal-item:last-child { border-bottom: none; }
+    .goal-header { display: flex; justify-content: space-between; margin-bottom: .3rem; font-size: .85rem; }
+    .goal-title { font-weight: 600; }
+    .goal-pct { color: #818cf8; font-weight: 700; }
+    .goal-track { height: 6px; background: #1e2a5e; border-radius: 3px; margin-bottom: .25rem; }
+    .goal-bar { height: 6px; border-radius: 3px; transition: width .4s; }
+    .goal-bar.on-track { background: #22c55e; }
+    .goal-bar.off-track { background: #f87171; }
+    .goal-meta { font-size: .74rem; color: #64748b; }
+
+    /* Rec items */
+    .rec-item { padding: .7rem 0; border-bottom: 1px solid #1e2a5e; }
+    .rec-item:last-child { border-bottom: none; }
+    .rec-title { font-weight: 600; font-size: .875rem; margin-bottom: .25rem; }
+    .rec-desc { font-size: .8rem; color: #94a3b8; }
+    .rec-action { font-size: .78rem; color: #34d399; margin-top: .25rem; }
+
+    /* Forecast */
+    .fc-row { display: flex; gap: .5rem; align-items: center; padding: .4rem 0; border-bottom: 1px solid #1e2a5e; font-size: .84rem; }
+    .fc-row:last-child { border-bottom: none; }
+    .fc-period { min-width: 70px; color: #94a3b8; }
+    .fc-val { min-width: 120px; color: #818cf8; font-weight: 600; }
+    .fc-bar-wrap { flex: 1; }
+    .fc-bar { height: 6px; background: linear-gradient(90deg,#4f46e5,#818cf8); border-radius: 3px; }
+
+    /* Approval */
+    .approval-item { padding: .7rem 0; border-bottom: 1px solid #1e2a5e; }
+    .approval-item:last-child { border-bottom: none; }
+    .approval-header { display: flex; justify-content: space-between; margin-bottom: .3rem; }
+    .approval-title { font-weight: 600; font-size: .875rem; }
+    .approval-desc { font-size: .78rem; color: #94a3b8; }
+    .approval-actions { display: flex; gap: .5rem; margin-top: .5rem; }
+
+    /* Policy */
+    .policy-item { padding: .7rem 0; border-bottom: 1px solid #1e2a5e; }
+    .policy-item:last-child { border-bottom: none; }
+    .policy-title { font-weight: 600; font-size: .875rem; }
+    .policy-cat { font-size: .75rem; color: #818cf8; }
+    .policy-preview { font-size: .78rem; color: #64748b; margin-top: .25rem; }
+
+    /* Compliance */
+    .check-item { display: flex; gap: .6rem; align-items: center; padding: .5rem 0; border-bottom: 1px solid #1e2a5e; font-size: .84rem; }
+    .check-item:last-child { border-bottom: none; }
+    .check-pass { color: #22c55e; font-size: 1rem; }
+    .check-fail { color: #f87171; font-size: 1rem; }
+    .check-fix { font-size: .74rem; color: #f59e0b; margin-top: .15rem; }
+
+    /* Forms */
+    .form-row { display: flex; flex-wrap: wrap; gap: .6rem; margin-bottom: .75rem; }
+    .form-group { display: flex; flex-direction: column; gap: .3rem; flex: 1; min-width: 150px; }
+    .form-group label { font-size: .78rem; color: #a5b4fc; }
+    .form-group input, .form-group select, .form-group textarea {
+      background: #080c14; border: 1px solid #1e2a5e; color: #e2e8f0;
+      border-radius: 6px; padding: .45rem .7rem; font-size: .85rem;
+    }
+    textarea { resize: vertical; min-height: 80px; font-family: inherit; }
+
+    .btn { display: inline-flex; align-items: center; gap: .4rem;
+      padding: .48rem 1.1rem; border-radius: 6px; border: none;
+      font-size: .85rem; font-weight: 600; cursor: pointer; transition: all .18s; }
+    .btn-primary { background: #4f46e5; color: #fff; }
+    .btn-primary:hover { background: #6366f1; }
+    .btn-sm { padding: .3rem .7rem; font-size: .78rem; }
+    .btn-approve { background: #14532d; color: #86efac; border: 1px solid #22c55e; }
+    .btn-reject { background: #7f1d1d; color: #fca5a5; border: 1px solid #ef4444; }
+    .btn-outline { background: transparent; border: 1px solid #1e2a5e; color: #a5b4fc; }
+    .btn-outline:hover { border-color: #4f46e5; }
+
+    .badge { display: inline-block; padding: .18rem .55rem; border-radius: 999px; font-size: .72rem; font-weight: 700; }
+    .badge-critical { background: #7f1d1d; color: #fca5a5; }
+    .badge-high { background: #7f1d1d; color: #fca5a5; }
+    .badge-medium { background: #78350f; color: #fcd34d; }
+    .badge-low { background: #14532d; color: #86efac; }
+    .badge-blue { background: #1e3a8a; color: #93c5fd; }
+    .badge-pending { background: #78350f; color: #fcd34d; }
+    .badge-approved { background: #14532d; color: #86efac; }
+    .badge-rejected { background: #7f1d1d; color: #fca5a5; }
+
+    .result-box { margin-top: .75rem; background: #080c14; border: 1px solid #1e2a5e; border-radius: 8px; padding: 1rem; }
+    .result-row { display: flex; justify-content: space-between; padding: .35rem 0; border-bottom: 1px solid #13193a; font-size: .84rem; }
+    .result-row:last-child { border-bottom: none; }
+    .result-val { color: #818cf8; font-weight: 600; }
+
+    .loading { color: #475569; font-style: italic; font-size: .84rem; }
+    .error { color: #f87171; font-size: .84rem; padding: .5rem; background: #7f1d1d22; border-radius: 6px; margin-top: .5rem; }
+    .success { color: #22c55e; font-size: .84rem; }
+  </style>
+<script src="/static/aura-notifications.js"></script>
+</head>
+<body>
+<header>
+  <div style="flex:1">
+    <h1>MB Future Tech Enterprise</h1>
+    <small>Autonomous Enterprise · Strategy · Governance · Compliance</small>
+  </div>
+  <nav class="header-nav">
+    <a href="/dashboard">Dashboard</a>
+    <a href="/intelligence">Intelligence</a>
+    <a href="/global">Global</a>
+  </nav>
+</header>
+
+<main>
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('exec')">Executive</button>
+    <button class="tab-btn" onclick="switchTab('goals')">Goals & KPIs</button>
+    <button class="tab-btn" onclick="switchTab('forecast')">Forecasting</button>
+    <button class="tab-btn" onclick="switchTab('plans')">Plans</button>
+    <button class="tab-btn" onclick="switchTab('governance')">Governance</button>
+    <button class="tab-btn" onclick="switchTab('compliance')">Compliance</button>
+    <button class="tab-btn" onclick="switchTab('audit')">Audit Log</button>
+  </div>
+
+  <!-- Executive Dashboard -->
+  <div class="tab-panel active" id="tab-exec">
+    <div class="grid grid-4" style="margin-bottom:1rem" id="execKPIRow">
+      <div class="card kpi-card"><div class="val loading">…</div><div class="name">Monthly Revenue</div></div>
+      <div class="card kpi-card"><div class="val loading">…</div><div class="name">Net Profit</div></div>
+      <div class="card kpi-card"><div class="val loading">…</div><div class="name">Customers</div></div>
+      <div class="card kpi-card"><div class="val loading">…</div><div class="name">Health Grade</div></div>
+    </div>
+    <div class="grid grid-2">
+      <div class="card">
+        <h3>Company Health Score</h3>
+        <div class="health-ring" id="healthRing"><p class="loading">Loading…</p></div>
+      </div>
+      <div class="card">
+        <h3>Strategic Recommendations</h3>
+        <div id="execRecs"><p class="loading">Loading…</p></div>
+      </div>
+      <div class="card">
+        <h3>Compliance Status</h3>
+        <div id="execCompliance"><p class="loading">Loading…</p></div>
+      </div>
+      <div class="card">
+        <h3>Pending Approvals</h3>
+        <div id="execApprovals"><p class="loading">Loading…</p></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Goals & KPIs -->
+  <div class="tab-panel" id="tab-goals">
+    <div class="grid grid-2">
+      <div class="card">
+        <h3>Active Goals</h3>
+        <div id="goalsList"><p class="loading">Loading…</p></div>
+        <div style="margin-top:1rem;border-top:1px solid #1e2a5e;padding-top:1rem">
+          <div style="font-size:.85rem;font-weight:600;color:#818cf8;margin-bottom:.5rem">Add Goal</div>
+          <div class="form-row">
+            <div class="form-group"><label>Title</label><input id="gTitle" placeholder="Reach 100 customers" /></div>
+            <div class="form-group"><label>Category</label>
+              <select id="gCat">
+                <option value="growth">Growth</option><option value="financial">Financial</option>
+                <option value="operations">Operations</option><option value="hr">HR</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label>Target Value</label><input type="number" id="gTarget" placeholder="100" /></div>
+            <div class="form-group"><label>Unit</label><input id="gUnit" placeholder="customers" /></div>
+            <div class="form-group"><label>Deadline</label><input type="date" id="gDeadline" /></div>
+          </div>
+          <button class="btn btn-primary" onclick="createGoal()">Add Goal</button>
+          <div id="goalMsg"></div>
+        </div>
+      </div>
+      <div class="card">
+        <h3>KPI Dashboard</h3>
+        <div style="margin-bottom:.5rem"><button class="btn btn-primary btn-sm" onclick="refreshKPIs()">Refresh KPIs</button></div>
+        <div id="kpiGrid" class="grid grid-2" style="gap:.5rem"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Forecasting -->
+  <div class="tab-panel" id="tab-forecast">
+    <div style="margin-bottom:1rem;display:flex;gap:.75rem;align-items:center">
+      <div class="form-group" style="min-width:140px;flex:none">
+        <label>Periods (months)</label>
+        <input type="number" id="fcPeriods" value="3" min="1" max="12" />
+      </div>
+      <div style="margin-top:1.2rem"><button class="btn btn-primary" onclick="loadForecasts()">Generate Forecasts</button></div>
+    </div>
+    <div class="grid grid-2" id="forecastGrid">
+      <p class="loading">Loading…</p>
+    </div>
+  </div>
+
+  <!-- Plans -->
+  <div class="tab-panel" id="tab-plans">
+    <div class="grid grid-2">
+      <div class="card">
+        <h3>Create Business Plan</h3>
+        <div class="form-row">
+          <div class="form-group"><label>Title</label><input id="pTitle" placeholder="2026 Annual Growth Plan" /></div>
+          <div class="form-group"><label>Type</label>
+            <select id="pType">
+              <option value="annual">Annual</option><option value="quarterly">Quarterly</option>
+              <option value="project">Project</option><option value="expansion">Expansion</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>Start Date</label><input type="date" id="pStart" /></div>
+          <div class="form-group"><label>End Date</label><input type="date" id="pEnd" /></div>
+          <div class="form-group"><label>Budget (₱)</label><input type="number" id="pBudget" placeholder="500000" /></div>
+        </div>
+        <div class="form-group" style="margin-bottom:.75rem">
+          <label>Description</label>
+          <textarea id="pDesc" placeholder="Describe the plan objectives and strategy…"></textarea>
+        </div>
+        <button class="btn btn-primary" onclick="createPlan()">Create Plan</button>
+        <div id="planMsg"></div>
+      </div>
+      <div class="card">
+        <h3>Business Plans</h3>
+        <div id="plansList"><p class="loading">Loading…</p></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Governance -->
+  <div class="tab-panel" id="tab-governance">
+    <div class="grid grid-2">
+      <div class="card">
+        <h3>Approval Requests</h3>
+        <div style="margin-bottom:.75rem">
+          <button class="btn btn-outline btn-sm" onclick="loadApprovals('pending')">Pending</button>
+          <button class="btn btn-outline btn-sm" onclick="loadApprovals('approved')">Approved</button>
+          <button class="btn btn-outline btn-sm" onclick="loadApprovals()">All</button>
+        </div>
+        <div id="approvalsList"><p class="loading">Loading…</p></div>
+        <div style="margin-top:1rem;border-top:1px solid #1e2a5e;padding-top:1rem">
+          <div style="font-size:.85rem;font-weight:600;color:#818cf8;margin-bottom:.5rem">Submit Request</div>
+          <div class="form-row">
+            <div class="form-group"><label>Type</label>
+              <select id="aType">
+                <option value="expense">Expense</option><option value="hire">Hire</option>
+                <option value="purchase">Purchase</option><option value="policy_change">Policy Change</option>
+              </select>
+            </div>
+            <div class="form-group"><label>Amount (₱)</label><input type="number" id="aAmount" placeholder="0" /></div>
+          </div>
+          <div class="form-group" style="margin-bottom:.5rem"><label>Title</label><input id="aTitle" placeholder="Office equipment purchase" /></div>
+          <button class="btn btn-primary btn-sm" onclick="submitApproval()">Submit</button>
+          <div id="approvalMsg"></div>
+        </div>
+      </div>
+      <div class="card">
+        <h3>Company Policies</h3>
+        <div style="margin-bottom:.5rem">
+          <button class="btn btn-outline btn-sm" onclick="seedPolicies()">Seed Default Policies</button>
+        </div>
+        <div id="policiesList"><p class="loading">Loading…</p></div>
+        <div style="margin-top:1rem;border-top:1px solid #1e2a5e;padding-top:1rem">
+          <div style="font-size:.85rem;font-weight:600;color:#818cf8;margin-bottom:.5rem">Add Policy</div>
+          <div class="form-row">
+            <div class="form-group"><label>Title</label><input id="polTitle" placeholder="Policy title" /></div>
+            <div class="form-group"><label>Category</label>
+              <select id="polCat">
+                <option value="financial">Financial</option><option value="hr">HR</option>
+                <option value="compliance">Compliance</option><option value="operations">Operations</option>
+                <option value="general">General</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group" style="margin-bottom:.5rem"><label>Content</label>
+            <textarea id="polContent" placeholder="Policy content…" style="min-height:60px"></textarea>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="createPolicy()">Add Policy</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Compliance -->
+  <div class="tab-panel" id="tab-compliance">
+    <div class="grid grid-2">
+      <div class="card">
+        <h3>Regulatory Checks</h3>
+        <div id="regChecks"><p class="loading">Loading…</p></div>
+        <div style="margin-top:.75rem">
+          <button class="btn btn-primary btn-sm" onclick="runRegChecks()">Re-run Checks</button>
+        </div>
+      </div>
+      <div class="card">
+        <h3>Tax Report</h3>
+        <div class="form-row">
+          <div class="form-group"><label>Country</label>
+            <select id="taxCountry">
+              <option value="PH">🇵🇭 Philippines</option><option value="US">🇺🇸 USA</option>
+              <option value="EU">🇪🇺 EU</option><option value="JP">🇯🇵 Japan</option>
+              <option value="CN">🇨🇳 China</option><option value="KR">🇰🇷 Korea</option>
+            </select>
+          </div>
+          <div class="form-group"><label>Period</label>
+            <select id="taxPeriod">
+              <option value="monthly">Monthly</option><option value="quarterly">Quarterly</option><option value="annual">Annual</option>
+            </select>
+          </div>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="generateTax()">Generate Report</button>
+        <div id="taxResult"></div>
+      </div>
+      <div class="card" style="grid-column:1/-1">
+        <h3>Document Validator</h3>
+        <div class="form-row">
+          <div class="form-group"><label>Document Type</label>
+            <select id="docValType">
+              <option value="invoice">Invoice</option><option value="contract">Contract</option><option value="payslip">Payslip</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group" style="margin-bottom:.75rem"><label>Paste Document Content</label>
+          <textarea id="docValContent" style="min-height:100px" placeholder="Paste the document text here…"></textarea>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="validateDoc()">Validate</button>
+        <div id="docValResult"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Audit Log -->
+  <div class="tab-panel" id="tab-audit">
+    <div class="card">
+      <h3>Enterprise Audit Log</h3>
+      <div id="auditLog"><p class="loading">Loading…</p></div>
+    </div>
+  </div>
+</main>
+
+<script>
+const API = '';
+let TOKEN = localStorage.getItem('token') || '';
+
+async function api(path, method = 'GET', body = null) {
+  const opts = {
+    method,
+    headers: { 'Authorization': `Bearer ${TOKEN}`, 'Content-Type': 'application/json' },
+  };
+  if (body) opts.body = JSON.stringify(body);
+  const r = await fetch(API + path, opts);
+  if (!r.ok) throw new Error((await r.json()).detail || r.statusText);
+  return r.json();
+}
+
+function fmt(n) {
+  if (n === undefined || n === null) return '—';
+  if (typeof n !== 'number') return n;
+  return '₱' + n.toLocaleString(undefined, { maximumFractionDigits: 2 });
+}
+
+function switchTab(name) {
+  document.querySelectorAll('.tab-btn').forEach(b => {
+    b.classList.toggle('active', b.getAttribute('onclick').includes(`'${name}'`));
+  });
+  document.querySelectorAll('.tab-panel').forEach(p => {
+    p.classList.toggle('active', p.id === 'tab-' + name);
+  });
+}
+
+// ── Executive Dashboard ───────────────────────────────────────────────────────
+
+async function loadExec() {
+  try {
+    const d = await api('/enterprise/dashboard');
+
+    // KPI row
+    const kpis = d.kpis || [];
+    const revKpi = kpis.find(k => k.name === 'Monthly Revenue');
+    const profKpi = kpis.find(k => k.name === 'Net Profit');
+    const custKpi = kpis.find(k => k.name === 'Total Customers');
+    const cards = document.querySelectorAll('#execKPIRow .kpi-card');
+    if (cards[0]) { cards[0].querySelector('.val').textContent = fmt(revKpi?.value); }
+    if (cards[1]) { cards[1].querySelector('.val').textContent = fmt(profKpi?.value); }
+    if (cards[2]) { cards[2].querySelector('.val').textContent = custKpi?.value ?? '—'; }
+    if (cards[3]) { cards[3].querySelector('.val').textContent = d.health?.grade ?? '—'; }
+
+    // Health ring
+    const h = d.health || {};
+    const pct = h.total_score || 0;
+    document.getElementById('healthRing').innerHTML = `
+      <div class="score-circle" style="--pct:${pct}%">
+        <div class="score-inner"><span class="num">${pct}</span><span class="grade">${h.grade}</span></div>
+      </div>
+      <div style="font-size:.78rem;color:#94a3b8;text-align:center;margin-bottom:.75rem">${h.interpretation || ''}</div>
+      ${Object.entries(h.dimensions || {}).map(([dim, v]) => `
+        <div class="dim-bar" style="width:100%">
+          <div class="dim-label"><span>${dim}</span><span>${v.score}/${v.max}</span></div>
+          <div class="bar-track"><div class="bar-fill" style="width:${v.score/v.max*100}%"></div></div>
+        </div>`).join('')}`;
+
+    // Recommendations
+    document.getElementById('execRecs').innerHTML = (d.recommendations || []).slice(0,4).map(r =>
+      `<div class="rec-item">
+        <div class="rec-title"><span class="badge badge-${r.priority}">${r.priority}</span> ${r.title}</div>
+        <div class="rec-desc">${r.description}</div>
+        <div class="rec-action">→ ${r.action}</div>
+      </div>`).join('') || '<p class="loading">No recommendations.</p>';
+
+    // Compliance
+    const comp = d.compliance || {};
+    document.getElementById('execCompliance').innerHTML = `
+      <div style="display:flex;align-items:center;gap:1rem;margin-bottom:.75rem">
+        <div style="font-size:1.8rem;font-weight:700;color:${comp.compliance_rate>=80?'#22c55e':'#f87171'}">${comp.compliance_rate}%</div>
+        <div style="font-size:.84rem;color:#94a3b8">${comp.passed}/${comp.total} checks passed</div>
+      </div>
+      ${(comp.checks||[]).map(c => `<div class="check-item">
+        <span class="${c.passed?'check-pass':'check-fail'}">${c.passed?'✓':'✗'}</span>
+        <div><div>${c.name}</div>${!c.passed?`<div class="check-fix">Fix: ${c.fix}</div>`:''}</div>
+      </div>`).join('')}`;
+
+    // Pending approvals
+    const gov = d.governance || {};
+    const pending = (gov.approvals || []).slice(0,5);
+    document.getElementById('execApprovals').innerHTML = pending.length
+      ? pending.map(a => `<div class="approval-item">
+          <div class="approval-header"><span class="approval-title">${a.title}</span><span class="badge badge-pending">pending</span></div>
+          <div class="approval-desc">${a.request_type} · ${a.amount > 0 ? fmt(a.amount) : 'no amount'}</div>
+        </div>`).join('')
+      : '<p style="color:#22c55e;font-size:.84rem">✓ No pending approvals</p>';
+
+  } catch(e) { console.error(e); }
+}
+
+// ── Goals ─────────────────────────────────────────────────────────────────────
+
+async function loadGoals() {
+  try {
+    const goals = await api('/enterprise/goals');
+    document.getElementById('goalsList').innerHTML = goals.length
+      ? goals.map(g => `<div class="goal-item">
+          <div class="goal-header">
+            <span class="goal-title">${g.title}</span>
+            <span class="goal-pct">${g.progress_pct}%</span>
+          </div>
+          <div class="goal-track"><div class="goal-bar ${g.on_track?'on-track':'off-track'}" style="width:${g.progress_pct}%"></div></div>
+          <div class="goal-meta">${g.current_value} / ${g.target_value} ${g.unit} · ${g.category} · <span class="badge badge-${g.priority}">${g.priority}</span></div>
+        </div>`).join('')
+      : '<p class="loading">No goals yet. Add your first goal below.</p>';
+  } catch(e) {}
+}
+
+async function createGoal() {
+  const body = {
+    title: document.getElementById('gTitle').value,
+    category: document.getElementById('gCat').value,
+    target_value: parseFloat(document.getElementById('gTarget').value) || 0,
+    unit: document.getElementById('gUnit').value,
+    deadline: document.getElementById('gDeadline').value,
+    priority: 'medium',
+  };
+  if (!body.title) { document.getElementById('goalMsg').innerHTML = '<p class="error">Title required</p>'; return; }
+  try {
+    await api('/enterprise/goals', 'POST', body);
+    document.getElementById('goalMsg').innerHTML = '<p class="success">✓ Goal created</p>';
+    loadGoals();
+  } catch(e) {
+    document.getElementById('goalMsg').innerHTML = `<p class="error">${e.message}</p>`;
+  }
+}
+
+async function refreshKPIs() {
+  try {
+    const kpis = await api('/enterprise/kpis/refresh', 'POST');
+    renderKPIGrid(kpis);
+  } catch(e) {}
+}
+
+async function loadKPIs() {
+  try {
+    const kpis = await api('/enterprise/kpis');
+    renderKPIGrid(kpis);
+  } catch(e) {}
+}
+
+function renderKPIGrid(kpis) {
+  const unique = {};
+  kpis.forEach(k => { if (!unique[k.name]) unique[k.name] = k; });
+  document.getElementById('kpiGrid').innerHTML = Object.values(unique).slice(0, 8).map(k => {
+    const pct = k.target > 0 ? Math.min(k.value / k.target * 100, 100) : 50;
+    return `<div class="card kpi-card" style="padding:.5rem">
+      <div class="val ${k.trend==='up'?'trend-up':k.trend==='down'?'trend-down':'trend-stable'}" style="font-size:1.1rem">
+        ${k.unit === 'PHP' ? fmt(k.value) : k.value + (k.unit ? ' '+k.unit : '')}
+      </div>
+      <div class="name" style="font-size:.7rem">${k.name}</div>
+      <div class="target" style="font-size:.68rem">Target: ${k.unit === 'PHP' ? fmt(k.target) : k.target}</div>
+      <div style="height:4px;background:#1e2a5e;border-radius:2px;margin-top:.3rem">
+        <div style="width:${pct}%;height:4px;background:#4f46e5;border-radius:2px"></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── Forecasting ───────────────────────────────────────────────────────────────
+
+async function loadForecasts() {
+  const periods = parseInt(document.getElementById('fcPeriods').value) || 3;
+  document.getElementById('forecastGrid').innerHTML = '<p class="loading">Generating forecasts…</p>';
+  try {
+    const d = await api(`/enterprise/forecast?periods=${periods}`);
+    const sections = [
+      { key: 'revenue', label: 'Revenue Forecast', color: '#22c55e' },
+      { key: 'expenses', label: 'Expense Forecast', color: '#f87171' },
+      { key: 'hiring', label: 'Hiring Forecast', color: '#818cf8' },
+      { key: 'expansion', label: 'Expansion Readiness', color: '#f59e0b' },
+    ];
+    document.getElementById('forecastGrid').innerHTML = sections.map(s => {
+      const items = d[s.key] || [];
+      const maxVal = Math.max(...items.map(i => i.value || i.readiness_score || 0), 1);
+      return `<div class="card">
+        <h3>${s.label}</h3>
+        ${items.map(item => {
+          const val = item.readiness_score ?? item.value ?? 0;
+          const label = item.stage ? `${item.period_label} — ${item.stage}` : item.period_label;
+          const display = s.key === 'hiring' ? `${item.total_headcount} people` :
+                          s.key === 'expansion' ? `${val}% ready` : `₱${val.toLocaleString()}`;
+          return `<div class="fc-row">
+            <span class="fc-period">${label}</span>
+            <span class="fc-val" style="color:${s.color}">${display}</span>
+            <div class="fc-bar-wrap"><div class="fc-bar" style="width:${Math.min(val/maxVal*100,100).toFixed(1)}%;background:${s.color}"></div></div>
+          </div>`;
+        }).join('')}
+      </div>`;
+    }).join('');
+  } catch(e) {
+    document.getElementById('forecastGrid').innerHTML = `<p class="error">${e.message}</p>`;
+  }
+}
+
+// ── Plans ─────────────────────────────────────────────────────────────────────
+
+async function loadPlans() {
+  try {
+    const plans = await api('/enterprise/plans');
+    document.getElementById('plansList').innerHTML = plans.length
+      ? plans.map(p => `<div class="policy-item">
+          <div class="policy-title">${p.title} <span class="badge badge-blue">${p.plan_type}</span></div>
+          <div class="policy-cat">${p.start_date || '—'} → ${p.end_date || '—'} · Budget: ${fmt(p.budget)}</div>
+          <div class="policy-preview">${p.description?.slice(0,80) || '—'}</div>
+        </div>`).join('')
+      : '<p class="loading">No plans yet.</p>';
+  } catch(e) {}
+}
+
+async function createPlan() {
+  const body = {
+    title: document.getElementById('pTitle').value,
+    plan_type: document.getElementById('pType').value,
+    description: document.getElementById('pDesc').value,
+    start_date: document.getElementById('pStart').value,
+    end_date: document.getElementById('pEnd').value,
+    budget: parseFloat(document.getElementById('pBudget').value) || 0,
+    milestones: [],
+  };
+  if (!body.title) { document.getElementById('planMsg').innerHTML = '<p class="error">Title required</p>'; return; }
+  try {
+    await api('/enterprise/plan', 'POST', body);
+    document.getElementById('planMsg').innerHTML = '<p class="success">✓ Plan created</p>';
+    loadPlans();
+  } catch(e) {
+    document.getElementById('planMsg').innerHTML = `<p class="error">${e.message}</p>`;
+  }
+}
+
+// ── Governance ────────────────────────────────────────────────────────────────
+
+async function loadApprovals(status) {
+  const url = status ? `/enterprise/approvals?status=${status}` : '/enterprise/approvals';
+  try {
+    const approvals = await api(url);
+    document.getElementById('approvalsList').innerHTML = approvals.length
+      ? approvals.map(a => `<div class="approval-item">
+          <div class="approval-header">
+            <span class="approval-title">${a.title}</span>
+            <span class="badge badge-${a.status}">${a.status}</span>
+          </div>
+          <div class="approval-desc">${a.request_type} · ${a.amount > 0 ? fmt(a.amount) : ''} · ${new Date(a.created_at).toLocaleDateString()}</div>
+          ${a.status === 'pending' ? `<div class="approval-actions">
+            <button class="btn btn-approve btn-sm" onclick="decideApproval(${a.id}, 'approved', ${a.amount})">Approve</button>
+            <button class="btn btn-reject btn-sm" onclick="decideApproval(${a.id}, 'rejected', ${a.amount})">Reject</button>
+          </div>` : (a.decision_note ? `<div style="font-size:.75rem;color:#94a3b8">Note: ${a.decision_note}</div>` : '')}
+        </div>`).join('')
+      : '<p class="loading">No approvals found.</p>';
+  } catch(e) {}
+}
+
+async function submitApproval() {
+  const body = {
+    request_type: document.getElementById('aType').value,
+    title: document.getElementById('aTitle').value,
+    amount: parseFloat(document.getElementById('aAmount').value) || 0,
+  };
+  try {
+    await api('/enterprise/approvals', 'POST', body);
+    document.getElementById('approvalMsg').innerHTML = '<p class="success">✓ Submitted</p>';
+    loadApprovals();
+  } catch(e) {
+    document.getElementById('approvalMsg').innerHTML = `<p class="error">${e.message}</p>`;
+  }
+}
+
+async function decideApproval(id, decision, amount) {
+  const note = await auraPrompt(
+    `${decision === 'approved' ? 'Approval' : 'Rejection'} note (optional):`,
+    "",
+    { title: "Decision Note", multiline: true }
+  );
+  try {
+    await api(`/enterprise/approvals/${id}`, 'PATCH', { decision, note: note || '', amount });
+    loadApprovals();
+  } catch(e) { showToast(e.message); }
+}
+
+async function loadPolicies() {
+  try {
+    const policies = await api('/enterprise/policies');
+    document.getElementById('policiesList').innerHTML = policies.length
+      ? policies.map(p => `<div class="policy-item">
+          <div class="policy-title">${p.title}</div>
+          <div class="policy-cat">Category: ${p.category} · v${p.version}</div>
+          <div class="policy-preview">${p.content?.slice(0,100)}…</div>
+        </div>`).join('')
+      : '<p class="loading">No policies. Click "Seed Default Policies" to get started.</p>';
+  } catch(e) {}
+}
+
+async function seedPolicies() {
+  try {
+    await api('/enterprise/policies/seed-defaults', 'POST');
+    loadPolicies();
+  } catch(e) {}
+}
+
+async function createPolicy() {
+  const body = {
+    title: document.getElementById('polTitle').value,
+    category: document.getElementById('polCat').value,
+    content: document.getElementById('polContent').value,
+    version: '1.0',
+  };
+  if (!body.title || !body.content) return;
+  try {
+    await api('/enterprise/policies', 'POST', body);
+    loadPolicies();
+  } catch(e) {}
+}
+
+// ── Compliance ────────────────────────────────────────────────────────────────
+
+async function runRegChecks() {
+  try {
+    const d = await api('/enterprise/compliance');
+    document.getElementById('regChecks').innerHTML = `
+      <div style="display:flex;gap:1rem;align-items:center;margin-bottom:.75rem">
+        <div style="font-size:1.6rem;font-weight:700;color:${d.compliance_rate>=80?'#22c55e':'#f87171'}">${d.compliance_rate}%</div>
+        <div style="font-size:.82rem;color:#94a3b8">${d.passed}/${d.total} checks passed</div>
+      </div>
+      ${d.checks.map(c => `<div class="check-item">
+        <span class="${c.passed?'check-pass':'check-fail'}">${c.passed?'✓':'✗'}</span>
+        <div>
+          <div style="font-size:.84rem;font-weight:600">${c.name}</div>
+          <div style="font-size:.76rem;color:#64748b">${c.description}</div>
+          ${!c.passed ? `<div class="check-fix">→ ${c.fix}</div>` : ''}
+        </div>
+      </div>`).join('')}`;
+  } catch(e) {}
+}
+
+async function generateTax() {
+  const country = document.getElementById('taxCountry').value;
+  const period = document.getElementById('taxPeriod').value;
+  try {
+    const r = await api('/enterprise/compliance/tax-report', 'POST', { country_code: country, period });
+    document.getElementById('taxResult').innerHTML = `
+      <div class="result-box">
+        <div class="result-row"><span>Authority</span><span class="result-val">${r.authority}</span></div>
+        <div class="result-row"><span>Income</span><span class="result-val">${fmt(r.income)}</span></div>
+        <div class="result-row"><span>Expenses</span><span class="result-val">${fmt(r.expenses)}</span></div>
+        <div class="result-row"><span>Profit</span><span class="result-val">${fmt(r.profit)}</span></div>
+        <div class="result-row"><span>VAT (${r.vat_rate})</span><span class="result-val">${fmt(r.vat_payable)}</span></div>
+        <div class="result-row"><span>Corporate Tax (${r.corporate_tax_rate})</span><span class="result-val">${fmt(r.corporate_tax_payable)}</span></div>
+        <div class="result-row" style="border-top:1px solid #4f46e5;margin-top:.25rem;padding-top:.35rem">
+          <span style="font-weight:700">Total Tax Obligation</span>
+          <span class="result-val" style="font-size:1.1rem">${fmt(r.total_tax_obligation)}</span>
+        </div>
+        <div style="font-size:.74rem;color:#f59e0b;margin-top:.5rem">⚠ ${r.disclaimer}</div>
+      </div>`;
+  } catch(e) {
+    document.getElementById('taxResult').innerHTML = `<p class="error">${e.message}</p>`;
+  }
+}
+
+async function validateDoc() {
+  const type = document.getElementById('docValType').value;
+  const content = document.getElementById('docValContent').value;
+  if (!content.trim()) return;
+  try {
+    const r = await api('/enterprise/compliance/validate-document', 'POST', { document_type: type, content });
+    document.getElementById('docValResult').innerHTML = `
+      <div class="result-box">
+        <div style="font-size:1.1rem;font-weight:700;color:${r.valid?'#22c55e':'#f87171'}">
+          ${r.valid ? '✓ Valid' : '✗ Incomplete'} — ${r.completeness_score}% complete
+        </div>
+        <div style="margin-top:.5rem">${r.field_checks.map(c =>
+          `<div class="check-item">
+            <span class="${c.found?'check-pass':'check-fail'}">${c.found?'✓':'✗'}</span>
+            <span style="font-size:.83rem">${c.field}</span>
+          </div>`).join('')}
+        </div>
+        <div style="font-size:.8rem;color:${r.valid?'#22c55e':'#f59e0b'};margin-top:.5rem">${r.recommendation}</div>
+      </div>`;
+  } catch(e) {
+    document.getElementById('docValResult').innerHTML = `<p class="error">${e.message}</p>`;
+  }
+}
+
+// ── Audit ─────────────────────────────────────────────────────────────────────
+
+async function loadAudit() {
+  try {
+    const logs = await api('/enterprise/audit');
+    document.getElementById('auditLog').innerHTML = logs.length
+      ? `<table style="width:100%;border-collapse:collapse;font-size:.82rem">
+          <thead><tr style="color:#818cf8;border-bottom:1px solid #1e2a5e">
+            <th style="text-align:left;padding:.4rem">Time</th>
+            <th style="text-align:left;padding:.4rem">Action</th>
+            <th style="text-align:left;padding:.4rem">Resource</th>
+            <th style="text-align:left;padding:.4rem">Details</th>
+          </tr></thead>
+          <tbody>${logs.map(l => `<tr style="border-bottom:1px solid #1e2a5e">
+            <td style="padding:.4rem;color:#64748b">${new Date(l.created_at).toLocaleString()}</td>
+            <td style="padding:.4rem">${l.action}</td>
+            <td style="padding:.4rem;color:#818cf8">${l.resource_type || '—'}</td>
+            <td style="padding:.4rem;color:#94a3b8">${l.details || '—'}</td>
+          </tr>`).join('')}</tbody>
+        </table>`
+      : '<p class="loading">No audit entries yet.</p>';
+  } catch(e) {}
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+if (!TOKEN) {
+  document.querySelectorAll('.loading').forEach(el => { el.textContent = 'Not logged in.'; });
+} else {
+  loadExec();
+  loadGoals();
+  loadKPIs();
+  loadForecasts();
+  loadPlans();
+  loadApprovals();
+  loadPolicies();
+  runRegChecks();
+  loadAudit();
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MB Future Tech — AI Chatbot | Business Intelligence</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, sans-serif; background: #0f1117; color: #e2e8f0; min-height: 100vh; }
+
+    header {
+      background: linear-gradient(135deg, #6d28d9 0%, #4f46e5 100%);
+      padding: 1.25rem 2rem;
+      display: flex; align-items: center; gap: 1rem;
+    }
+    header h1 { font-size: 1.4rem; font-weight: 700; }
+    header small { opacity: .7; font-size: .85rem; }
+    .header-nav a {
+      color: #c4b5fd; font-size: .85rem; text-decoration: none; margin-left: 1rem;
+    }
+    .header-nav a:hover { color: #fff; }
+
+    main { max-width: 1200px; margin: 2rem auto; padding: 0 1.5rem; }
+
+    .tabs { display: flex; gap: .5rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+    .tab-btn {
+      padding: .5rem 1.2rem; border-radius: 6px; border: 1px solid #334155;
+      background: #1e293b; color: #94a3b8; cursor: pointer; font-size: .875rem;
+      transition: all .2s;
+    }
+    .tab-btn.active { background: #6d28d9; color: #fff; border-color: #6d28d9; }
+
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    .grid { display: grid; gap: 1rem; }
+    .grid-2 { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+    .grid-3 { grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+    .grid-4 { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
+
+    .card {
+      background: #1e293b; border: 1px solid #334155; border-radius: 10px;
+      padding: 1.25rem;
+    }
+    .card h3 { font-size: 1rem; font-weight: 600; margin-bottom: .75rem; color: #c4b5fd; }
+    .card p { font-size: .875rem; color: #94a3b8; line-height: 1.6; }
+
+    .kpi { text-align: center; }
+    .kpi .value { font-size: 2rem; font-weight: 700; color: #a78bfa; }
+    .kpi .label { font-size: .8rem; color: #94a3b8; margin-top: .25rem; }
+    .kpi .sub { font-size: .75rem; color: #64748b; margin-top: .25rem; }
+
+    .badge {
+      display: inline-block; padding: .2rem .6rem; border-radius: 999px;
+      font-size: .75rem; font-weight: 600;
+    }
+    .badge-high { background: #7f1d1d; color: #fca5a5; }
+    .badge-medium { background: #78350f; color: #fcd34d; }
+    .badge-low { background: #14532d; color: #86efac; }
+
+    .risk-item {
+      display: flex; gap: .75rem; align-items: flex-start; padding: .75rem 0;
+      border-bottom: 1px solid #334155;
+    }
+    .risk-item:last-child { border-bottom: none; }
+
+    .rec-item {
+      padding: .75rem 0; border-bottom: 1px solid #334155;
+    }
+    .rec-item:last-child { border-bottom: none; }
+    .rec-item .rec-title { font-weight: 600; font-size: .9rem; margin-bottom: .25rem; }
+    .rec-item .rec-desc { font-size: .8rem; color: #94a3b8; }
+    .rec-item .impact { font-size: .75rem; color: #a78bfa; }
+
+    .forecast-bar-wrap { margin-top: .5rem; }
+    .forecast-bar-label { font-size: .78rem; color: #94a3b8; margin-bottom: .25rem; display: flex; justify-content: space-between; }
+    .bar-track { background: #334155; border-radius: 4px; height: 8px; }
+    .bar-fill { height: 8px; border-radius: 4px; background: linear-gradient(90deg, #6d28d9, #a78bfa); transition: width .4s; }
+
+    .form-row { display: flex; flex-wrap: wrap; gap: 1rem; margin-bottom: 1rem; }
+    .form-group { display: flex; flex-direction: column; gap: .4rem; flex: 1; min-width: 180px; }
+    .form-group label { font-size: .8rem; color: #94a3b8; }
+    .form-group input, .form-group select {
+      background: #0f1117; border: 1px solid #334155; color: #e2e8f0;
+      border-radius: 6px; padding: .5rem .75rem; font-size: .875rem;
+    }
+
+    .btn {
+      display: inline-flex; align-items: center; gap: .5rem;
+      padding: .6rem 1.25rem; border-radius: 7px; border: none;
+      font-size: .875rem; font-weight: 600; cursor: pointer; transition: all .2s;
+    }
+    .btn-primary { background: #6d28d9; color: #fff; }
+    .btn-primary:hover { background: #7c3aed; }
+    .btn-outline { background: transparent; border: 1px solid #334155; color: #94a3b8; }
+    .btn-outline:hover { border-color: #6d28d9; color: #c4b5fd; }
+
+    .sim-result {
+      margin-top: 1rem; background: #0f1117; border: 1px solid #334155;
+      border-radius: 8px; padding: 1rem;
+    }
+    .sim-result h4 { margin-bottom: .75rem; color: #a78bfa; }
+    .sim-row { display: flex; justify-content: space-between; padding: .4rem 0;
+      border-bottom: 1px solid #1e293b; font-size: .85rem; }
+    .sim-row:last-child { border-bottom: none; }
+    .sim-row .val { color: #e2e8f0; font-weight: 600; }
+    .verdict { margin-top: .75rem; padding: .5rem .75rem; border-radius: 6px; font-size: .85rem; font-weight: 600; }
+    .verdict.good { background: #14532d; color: #86efac; }
+    .verdict.warn { background: #78350f; color: #fcd34d; }
+
+    .loading { color: #64748b; font-style: italic; font-size: .9rem; padding: 1rem 0; }
+    .error { color: #f87171; font-size: .875rem; padding: .5rem; background: #7f1d1d22; border-radius: 6px; margin-top: .5rem; }
+
+    .opt-stat { display: flex; justify-content: space-between; padding: .4rem 0;
+      border-bottom: 1px solid #334155; font-size: .85rem; }
+    .opt-stat:last-child { border-bottom: none; }
+
+    .opp-item { padding: .75rem 0; border-bottom: 1px solid #334155; }
+    .opp-item:last-child { border-bottom: none; }
+    .opp-item .opp-title { font-weight: 600; font-size: .9rem; }
+    .opp-item .opp-val { color: #a78bfa; font-size: .85rem; margin-top: .25rem; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div style="flex:1">
+    <h1>MB Future Tech AI Intelligence</h1>
+    <small>Autonomous Business Intelligence Platform</small>
+  </div>
+  <nav class="header-nav">
+    <a href="/dashboard">Dashboard</a>
+    <a href="/os">OS</a>
+    <a href="/network">Network</a>
+  </nav>
+</header>
+
+<main>
+  <!-- KPI Bar -->
+  <div class="grid grid-4" id="kpiBar" style="margin-bottom:1.5rem">
+    <div class="card kpi"><div class="value loading">…</div><div class="label">Predicted Revenue</div></div>
+    <div class="card kpi"><div class="value loading">…</div><div class="label">Growth Rate</div></div>
+    <div class="card kpi"><div class="value loading">…</div><div class="label">Risk Level</div></div>
+    <div class="card kpi"><div class="value loading">…</div><div class="label">Opportunities</div></div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('dashboard')">Dashboard</button>
+    <button class="tab-btn" onclick="switchTab('predictions')">Predictions</button>
+    <button class="tab-btn" onclick="switchTab('recommendations')">Recommendations</button>
+    <button class="tab-btn" onclick="switchTab('simulations')">Simulations</button>
+    <button class="tab-btn" onclick="switchTab('forecast')">Forecast</button>
+    <button class="tab-btn" onclick="switchTab('optimizations')">Optimizations</button>
+  </div>
+
+  <!-- Dashboard Tab -->
+  <div class="tab-panel active" id="tab-dashboard">
+    <div class="grid grid-2">
+      <div class="card">
+        <h3>Risk Indicators</h3>
+        <div id="dashRisks"><p class="loading">Loading…</p></div>
+      </div>
+      <div class="card">
+        <h3>Growth Opportunities</h3>
+        <div id="dashOpps"><p class="loading">Loading…</p></div>
+      </div>
+      <div class="card">
+        <h3>Top AI Suggestions</h3>
+        <div id="dashRecs"><p class="loading">Loading…</p></div>
+      </div>
+      <div class="card">
+        <h3>3-Month Revenue Forecast</h3>
+        <div id="dashForecast"><p class="loading">Loading…</p></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Predictions Tab -->
+  <div class="tab-panel" id="tab-predictions">
+    <div class="grid grid-2" id="predictionsGrid">
+      <p class="loading">Loading predictions…</p>
+    </div>
+  </div>
+
+  <!-- Recommendations Tab -->
+  <div class="tab-panel" id="tab-recommendations">
+    <div class="grid grid-2" id="recsGrid">
+      <p class="loading">Loading recommendations…</p>
+    </div>
+  </div>
+
+  <!-- Simulations Tab -->
+  <div class="tab-panel" id="tab-simulations">
+    <div class="grid grid-2">
+      <div class="card">
+        <h3>Run Simulation</h3>
+        <div class="form-row" style="margin-top:.5rem">
+          <div class="form-group">
+            <label>Scenario Type</label>
+            <select id="simType" onchange="updateSimParams()">
+              <option value="budget">Budget</option>
+              <option value="expansion">Business Expansion</option>
+              <option value="what_if">What-If</option>
+            </select>
+          </div>
+        </div>
+        <div id="simParamFields"></div>
+        <button class="btn btn-primary" onclick="runSimulation()">Run Simulation</button>
+        <div id="simResult"></div>
+      </div>
+      <div class="card">
+        <h3>Past Simulations</h3>
+        <div id="simHistory"><p class="loading">Loading…</p></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Forecast Tab -->
+  <div class="tab-panel" id="tab-forecast">
+    <div class="grid grid-2">
+      <div class="card">
+        <h3>Multi-Period Forecast</h3>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Periods (months)</label>
+            <input type="number" id="forecastPeriods" value="3" min="1" max="12" />
+          </div>
+          <div class="form-group" style="justify-content:flex-end">
+            <label>&nbsp;</label>
+            <button class="btn btn-primary" onclick="loadForecast()">Generate</button>
+          </div>
+        </div>
+        <div id="forecastChart"><p class="loading">Loading…</p></div>
+      </div>
+      <div class="card">
+        <h3>Risk Analysis</h3>
+        <div id="forecastRisks"><p class="loading">Loading…</p></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Optimizations Tab -->
+  <div class="tab-panel" id="tab-optimizations">
+    <div class="grid grid-2" id="optGrid">
+      <p class="loading">Loading optimization analysis…</p>
+    </div>
+  </div>
+</main>
+
+<script>
+const API = '';
+let TOKEN = localStorage.getItem('token') || '';
+
+async function api(path, method='GET', body=null) {
+  const opts = {
+    method,
+    headers: { 'Authorization': `Bearer ${TOKEN}`, 'Content-Type': 'application/json' },
+  };
+  if (body) opts.body = JSON.stringify(body);
+  const r = await fetch(API + path, opts);
+  if (!r.ok) throw new Error((await r.json()).detail || r.statusText);
+  return r.json();
+}
+
+function fmt(n) {
+  if (n === undefined || n === null) return '—';
+  return '₱' + Number(n).toLocaleString(undefined, { maximumFractionDigits: 2 });
+}
+
+function switchTab(name) {
+  document.querySelectorAll('.tab-btn').forEach((b,i) => {
+    b.classList.toggle('active', b.textContent.trim().toLowerCase() === name ||
+      b.getAttribute('onclick').includes(name));
+  });
+  document.querySelectorAll('.tab-panel').forEach(p => {
+    p.classList.toggle('active', p.id === 'tab-' + name);
+  });
+}
+
+// ── KPI Bar ───────────────────────────────────────────────────────────────────
+
+async function loadKPIs() {
+  try {
+    const [preds, risks, opps] = await Promise.all([
+      api('/intelligence/predictions'),
+      api('/intelligence/risks'),
+      api('/intelligence/opportunities'),
+    ]);
+    const kpis = document.querySelectorAll('#kpiBar .kpi');
+    kpis[0].querySelector('.value').textContent = fmt(preds.revenue?.value);
+    const growthPct = preds.customer_growth?.estimated_growth_rate || '—';
+    kpis[1].querySelector('.value').textContent = growthPct;
+    const level = risks.highest_level || 'low';
+    kpis[2].querySelector('.value').innerHTML = `<span class="badge badge-${level}">${level.toUpperCase()}</span>`;
+    kpis[3].querySelector('.value').textContent = opps.opportunity_count;
+  } catch(e) {
+    console.error(e);
+  }
+}
+
+// ── Dashboard ─────────────────────────────────────────────────────────────────
+
+async function loadDashboard() {
+  try {
+    const [risks, opps, recs, forecast] = await Promise.all([
+      api('/intelligence/risks'),
+      api('/intelligence/opportunities'),
+      api('/intelligence/recommendations'),
+      api('/intelligence/forecast?periods=3'),
+    ]);
+
+    // Risks
+    document.getElementById('dashRisks').innerHTML = risks.risks.map(r =>
+      `<div class="risk-item">
+        <span class="badge badge-${r.level}">${r.level}</span>
+        <div><strong>${r.type}</strong><br><small style="color:#94a3b8">${r.message}</small></div>
+      </div>`
+    ).join('');
+
+    // Opportunities
+    document.getElementById('dashOpps').innerHTML = opps.opportunities.length
+      ? opps.opportunities.map(o =>
+        `<div class="opp-item">
+          <div class="opp-title">${o.title}</div>
+          <div class="opp-val">Potential: ${fmt(o.potential_value)}</div>
+        </div>`).join('')
+      : '<p class="loading">No opportunities found.</p>';
+
+    // Top recommendations (up to 4)
+    const allRecs = Object.values(recs).flat().sort((a,b) => b.impact_score - a.impact_score).slice(0,4);
+    document.getElementById('dashRecs').innerHTML = allRecs.map(r =>
+      `<div class="rec-item">
+        <div class="rec-title">${r.title}</div>
+        <div class="rec-desc">${r.description}</div>
+        <div class="impact">Impact score: ${(r.impact_score * 100).toFixed(0)}%</div>
+      </div>`
+    ).join('');
+
+    // Forecast bars
+    const revFc = forecast.forecast.revenue || [];
+    const maxVal = Math.max(...revFc.map(p => p.value), 1);
+    document.getElementById('dashForecast').innerHTML = revFc.map(p =>
+      `<div class="forecast-bar-wrap">
+        <div class="forecast-bar-label"><span>Month ${p.period}</span><span>${fmt(p.value)}</span></div>
+        <div class="bar-track"><div class="bar-fill" style="width:${Math.min(p.value/maxVal*100,100).toFixed(1)}%"></div></div>
+      </div>`
+    ).join('');
+
+  } catch(e) {
+    console.error(e);
+  }
+}
+
+// ── Predictions ───────────────────────────────────────────────────────────────
+
+async function loadPredictions() {
+  try {
+    const d = await api('/intelligence/predictions');
+    const cards = [
+      { key: 'revenue', label: 'Revenue Forecast', valFmt: fmt, extraFn: r => `Trend/period: ${fmt(r.trend_per_period)}` },
+      { key: 'sales', label: 'Sales Forecast', valFmt: v => v + ' new sales', extraFn: r => `Conversion rate: ${r.conversion_rate}%` },
+      { key: 'customer_growth', label: 'Customer Growth', valFmt: v => v + ' customers', extraFn: r => `Growth rate: ${r.estimated_growth_rate}` },
+      { key: 'inventory', label: 'Inventory Health', valFmt: v => v + ' weeks', extraFn: r => `Low-stock items: ${r.restock_needed}` },
+    ];
+    document.getElementById('predictionsGrid').innerHTML = cards.map(c => {
+      const data = d[c.key] || {};
+      const conf = ((data.confidence || 0) * 100).toFixed(0);
+      return `<div class="card">
+        <h3>${c.label}</h3>
+        <div class="kpi">
+          <div class="value">${c.valFmt(data.value)}</div>
+          <div class="sub">Confidence: ${conf}% · ${data.period || 'monthly'}</div>
+        </div>
+        <p style="margin-top:.75rem;font-size:.82rem;color:#94a3b8">${c.extraFn(data)}</p>
+      </div>`;
+    }).join('');
+  } catch(e) {
+    document.getElementById('predictionsGrid').innerHTML = `<p class="error">${e.message}</p>`;
+  }
+}
+
+// ── Recommendations ───────────────────────────────────────────────────────────
+
+async function loadRecommendations() {
+  try {
+    const d = await api('/intelligence/recommendations');
+    const el = document.getElementById('recsGrid');
+    const html = Object.entries(d).map(([cat, items]) =>
+      `<div class="card">
+        <h3>${cat.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase())}</h3>
+        ${items.length ? items.map(r =>
+          `<div class="rec-item">
+            <div class="rec-title">${r.title}</div>
+            <div class="rec-desc">${r.description}</div>
+            <div class="impact">Impact: ${(r.impact_score*100).toFixed(0)}%</div>
+          </div>`
+        ).join('') : '<p class="loading">No recommendations.</p>'}
+      </div>`
+    ).join('');
+    el.innerHTML = html;
+  } catch(e) {
+    document.getElementById('recsGrid').innerHTML = `<p class="error">${e.message}</p>`;
+  }
+}
+
+// ── Simulations ───────────────────────────────────────────────────────────────
+
+const SIM_PARAMS = {
+  budget: [
+    { id: 'income_change_pct', label: 'Income Change %', default: 20 },
+    { id: 'expense_change_pct', label: 'Expense Change %', default: -10 },
+  ],
+  expansion: [
+    { id: 'new_hires', label: 'New Hires', default: 2 },
+    { id: 'new_markets', label: 'New Markets', default: 1 },
+    { id: 'monthly_hire_cost', label: 'Cost per Hire (₱/mo)', default: 25000 },
+    { id: 'expected_revenue_per_market', label: 'Revenue per Market (₱/mo)', default: 50000 },
+  ],
+  what_if: [
+    { id: 'conversion_boost_pct', label: 'Conversion Boost %', default: 10 },
+    { id: 'price_increase_pct', label: 'Price Increase %', default: 5 },
+    { id: 'cost_cut_pct', label: 'Cost Cut %', default: 5 },
+  ],
+};
+
+function updateSimParams() {
+  const type = document.getElementById('simType').value;
+  const fields = SIM_PARAMS[type] || [];
+  document.getElementById('simParamFields').innerHTML =
+    `<div class="form-row">${fields.map(f =>
+      `<div class="form-group">
+        <label>${f.label}</label>
+        <input type="number" id="sp_${f.id}" value="${f.default}" />
+      </div>`).join('')}</div>`;
+  document.getElementById('simResult').innerHTML = '';
+}
+
+async function runSimulation() {
+  const type = document.getElementById('simType').value;
+  const fields = SIM_PARAMS[type] || [];
+  const params = {};
+  fields.forEach(f => { params[f.id] = parseFloat(document.getElementById('sp_'+f.id).value)||0; });
+  try {
+    const r = await api('/intelligence/simulate', 'POST', { scenario_type: type, params });
+    const proj = r.projected || {};
+    const isGood = (r.verdict||'').toLowerCase().includes('roi') || (r.verdict||'').includes('+') || (r.verdict||'').toLowerCase().includes('profitable');
+    document.getElementById('simResult').innerHTML = `
+      <div class="sim-result">
+        <h4>${type.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase())} Result</h4>
+        ${Object.entries(proj).map(([k,v]) =>
+          `<div class="sim-row"><span>${k.replace(/_/g,' ')}</span><span class="val">${typeof v === 'number' ? fmt(v) : v}</span></div>`
+        ).join('')}
+        <div class="verdict ${isGood ? 'good' : 'warn'}">${r.verdict}</div>
+      </div>`;
+    loadSimHistory();
+  } catch(e) {
+    document.getElementById('simResult').innerHTML = `<p class="error">${e.message}</p>`;
+  }
+}
+
+async function loadSimHistory() {
+  try {
+    const sims = await api('/intelligence/simulations');
+    document.getElementById('simHistory').innerHTML = sims.length
+      ? sims.map(s =>
+        `<div class="rec-item">
+          <div class="rec-title">${s.scenario_type.replace(/_/g,' ')}</div>
+          <div class="rec-desc">${new Date(s.created_at).toLocaleString()}</div>
+        </div>`).join('')
+      : '<p class="loading">No simulations yet.</p>';
+  } catch(e) {}
+}
+
+// ── Forecast ──────────────────────────────────────────────────────────────────
+
+async function loadForecast() {
+  const periods = parseInt(document.getElementById('forecastPeriods').value) || 3;
+  try {
+    const [fc, risks] = await Promise.all([
+      api(`/intelligence/forecast?periods=${periods}`),
+      api('/intelligence/risks'),
+    ]);
+
+    const metrics = Object.entries(fc.forecast);
+    const maxByMetric = {};
+    metrics.forEach(([k,vals]) => { maxByMetric[k] = Math.max(...vals.map(v=>v.value),1); });
+
+    document.getElementById('forecastChart').innerHTML = metrics.map(([metric, vals]) =>
+      `<div style="margin-bottom:1rem">
+        <div style="font-weight:600;font-size:.85rem;color:#c4b5fd;margin-bottom:.5rem">${metric.replace(/_/g,' ')}</div>
+        ${vals.map(p =>
+          `<div class="forecast-bar-wrap">
+            <div class="forecast-bar-label"><span>Month ${p.period}</span><span>${fmt(p.value)}</span></div>
+            <div class="bar-track"><div class="bar-fill" style="width:${Math.min(p.value/maxByMetric[metric]*100,100).toFixed(1)}%"></div></div>
+          </div>`
+        ).join('')}
+      </div>`
+    ).join('');
+
+    document.getElementById('forecastRisks').innerHTML = risks.risks.map(r =>
+      `<div class="risk-item">
+        <span class="badge badge-${r.level}">${r.level}</span>
+        <div><strong>${r.type}</strong><br><small style="color:#94a3b8">${r.message}</small></div>
+      </div>`
+    ).join('');
+
+  } catch(e) {
+    document.getElementById('forecastChart').innerHTML = `<p class="error">${e.message}</p>`;
+  }
+}
+
+// ── Optimizations ─────────────────────────────────────────────────────────────
+
+async function loadOptimizations() {
+  try {
+    const d = await api('/intelligence/optimizations');
+    const sections = [
+      { key: 'expenses', label: 'Expense Optimization', stats: ['current_expenses','current_income','expense_to_income_ratio','potential_savings'] },
+      { key: 'workflow', label: 'Workflow Optimization', stats: ['open_pipeline_leads','conversion_rate','employee_count'] },
+      { key: 'inventory', label: 'Inventory Optimization', stats: ['total_units','overstocked_items','understocked_items','out_of_stock'] },
+      { key: 'support', label: 'Support Optimization', stats: ['total_messages','user_messages','bot_responses','bot_resolution_rate'] },
+    ];
+    document.getElementById('optGrid').innerHTML = sections.map(s => {
+      const data = d[s.key] || {};
+      const suggestions = data.suggestions || data.optimizations || data.recommendations || [];
+      return `<div class="card">
+        <h3>${s.label}</h3>
+        ${s.stats.map(k => k in data ? `<div class="opt-stat"><span>${k.replace(/_/g,' ')}</span><span class="val">${data[k]}</span></div>` : '').join('')}
+        ${suggestions.length ? `<div style="margin-top:.75rem"><div style="font-size:.8rem;color:#a78bfa;margin-bottom:.4rem">Suggestions</div>${suggestions.map(sg=>`<div style="font-size:.8rem;color:#94a3b8;padding:.25rem 0;border-bottom:1px solid #334155">• ${sg}</div>`).join('')}</div>` : ''}
+      </div>`;
+    }).join('');
+  } catch(e) {
+    document.getElementById('optGrid').innerHTML = `<p class="error">${e.message}</p>`;
+  }
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+
+updateSimParams();
+
+if (!TOKEN) {
+  document.querySelectorAll('.loading').forEach(el => { el.textContent = 'Not logged in.'; });
+} else {
+  loadKPIs();
+  loadDashboard();
+  loadPredictions();
+  loadRecommendations();
+  loadSimHistory();
+  loadForecast();
+  loadOptimizations();
+}
+</script>
+</body>
+</html>

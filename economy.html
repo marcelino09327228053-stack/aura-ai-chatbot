@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MB Future Tech — AI Chatbot | Economic Network</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, sans-serif; background: #060a10; color: #e2e8f0; min-height: 100vh; }
+    header {
+      background: linear-gradient(135deg, #064e3b 0%, #0d4f4f 50%, #1e3a5f 100%);
+      padding: 1.25rem 2rem; display: flex; align-items: center;
+      border-bottom: 1px solid #134e4a;
+    }
+    header h1 { font-size: 1.4rem; font-weight: 700; flex: 1; }
+    header small { display: block; opacity: .7; font-size: .8rem; }
+    .header-nav a { color: #5eead4; font-size: .85rem; text-decoration: none; margin-left: 1rem; }
+    .header-nav a:hover { color: #fff; }
+    main { max-width: 1280px; margin: 1.5rem auto; padding: 0 1.5rem; }
+    .tabs { display: flex; gap: .4rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+    .tab-btn { padding: .45rem 1rem; border-radius: 6px; border: 1px solid #134e4a;
+      background: #0a1612; color: #5eead4; cursor: pointer; font-size: .85rem; transition: all .15s; }
+    .tab-btn.active { background: #0d9488; color: #fff; border-color: #0d9488; }
+    .tab-panel { display: none; } .tab-panel.active { display: block; }
+    .grid { display: grid; gap: 1rem; }
+    .grid-2 { grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
+    .grid-3 { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+    .card { background: #0a1612; border: 1px solid #134e4a; border-radius: 10px; padding: 1.25rem; }
+    .card h3 { font-size: .95rem; font-weight: 600; margin-bottom: .75rem; color: #2dd4bf; }
+    .kpi { text-align: center; padding: .75rem; }
+    .kpi .val { font-size: 1.5rem; font-weight: 700; color: #2dd4bf; }
+    .kpi .lbl { font-size: .75rem; color: #64748b; margin-top: .2rem; }
+    .item { padding: .7rem 0; border-bottom: 1px solid #134e4a; }
+    .item:last-child { border-bottom: none; }
+    .item-title { font-weight: 600; font-size: .875rem; margin-bottom: .2rem; }
+    .item-desc { font-size: .78rem; color: #94a3b8; }
+    .item-val { font-size: .8rem; color: #2dd4bf; margin-top: .2rem; }
+    .form-row { display: flex; flex-wrap: wrap; gap: .6rem; margin-bottom: .75rem; }
+    .form-group { display: flex; flex-direction: column; gap: .3rem; flex: 1; min-width: 140px; }
+    .form-group label { font-size: .78rem; color: #5eead4; }
+    .form-group input, .form-group select, .form-group textarea {
+      background: #060a10; border: 1px solid #134e4a; color: #e2e8f0;
+      border-radius: 6px; padding: .45rem .7rem; font-size: .84rem;
+    }
+    .btn { display: inline-flex; align-items: center; gap: .4rem; padding: .45rem 1.05rem;
+      border-radius: 6px; border: none; font-size: .84rem; font-weight: 600; cursor: pointer; }
+    .btn-primary { background: #0d9488; color: #fff; }
+    .btn-primary:hover { background: #14b8a6; }
+    .btn-sm { padding: .3rem .7rem; font-size: .78rem; }
+    .btn-outline { background: transparent; border: 1px solid #134e4a; color: #5eead4; }
+    .badge { display: inline-block; padding: .18rem .52rem; border-radius: 999px; font-size: .7rem; font-weight: 700; }
+    .badge-high { background: #7f1d1d; color: #fca5a5; }
+    .badge-medium { background: #78350f; color: #fcd34d; }
+    .badge-low { background: #14532d; color: #86efac; }
+    .badge-teal { background: #134e4a; color: #5eead4; }
+    .bar-track { height: 6px; background: #134e4a; border-radius: 3px; margin-top: .3rem; }
+    .bar-fill { height: 6px; border-radius: 3px; background: linear-gradient(90deg,#0d9488,#2dd4bf); }
+    .result-box { margin-top: .75rem; background: #060a10; border: 1px solid #134e4a; border-radius: 8px; padding: 1rem; }
+    .result-row { display: flex; justify-content: space-between; padding: .3rem 0; border-bottom: 1px solid #0a1612; font-size: .83rem; }
+    .result-row:last-child { border-bottom: none; }
+    .result-val { color: #2dd4bf; font-weight: 600; }
+    .loading { color: #475569; font-style: italic; font-size: .84rem; }
+    .error { color: #f87171; font-size: .83rem; padding: .5rem; background: #7f1d1d22; border-radius: 6px; }
+  </style>
+</head>
+<body>
+<header>
+  <div style="flex:1">
+    <h1>📈 MB Future Tech Economic Network</h1>
+    <small>Markets · Finance · Partnerships · Forecasting · Reports</small>
+  </div>
+  <nav class="header-nav">
+    <a href="/dashboard">Dashboard</a>
+    <a href="/corporation">Corporation</a>
+    <a href="/intelligence">Intelligence</a>
+  </nav>
+</header>
+<main>
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('overview')">Overview</button>
+    <button class="tab-btn" onclick="switchTab('markets')">Markets</button>
+    <button class="tab-btn" onclick="switchTab('finance')">Finance</button>
+    <button class="tab-btn" onclick="switchTab('partners')">Partnerships</button>
+    <button class="tab-btn" onclick="switchTab('forecast')">Forecasting</button>
+    <button class="tab-btn" onclick="switchTab('reports')">Reports</button>
+    <button class="tab-btn" onclick="switchTab('trading')">Trading</button>
+  </div>
+
+  <div class="tab-panel active" id="tab-overview">
+    <div class="grid grid-3" id="overviewKPIs" style="margin-bottom:1rem">
+      <div class="card kpi"><div class="val loading">…</div><div class="lbl">Market Outlook</div></div>
+      <div class="card kpi"><div class="val loading">…</div><div class="lbl">Cash Flow</div></div>
+      <div class="card kpi"><div class="val loading">…</div><div class="lbl">Opportunities</div></div>
+    </div>
+    <div class="grid grid-2">
+      <div class="card"><h3>Market Snapshot</h3><div id="overviewMarket"><p class="loading">Loading…</p></div></div>
+      <div class="card"><h3>Top Opportunities</h3><div id="overviewOpps"><p class="loading">Loading…</p></div></div>
+      <div class="card"><h3>Growth Analysis</h3><div id="overviewGrowth"><p class="loading">Loading…</p></div></div>
+      <div class="card"><h3>Partnership Status</h3><div id="overviewPartners"><p class="loading">Loading…</p></div></div>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="tab-markets">
+    <div class="grid grid-2">
+      <div class="card">
+        <h3>Market Analysis</h3>
+        <div class="form-row">
+          <div class="form-group"><label>Sector</label>
+            <select id="marketSector">
+              <option value="general">General</option><option value="retail">Retail</option>
+              <option value="technology">Technology</option><option value="services">Services</option>
+              <option value="food">Food</option>
+            </select>
+          </div>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="analyzeMarket()">Analyse Market</button>
+        <div id="marketResult"></div>
+      </div>
+      <div class="card">
+        <h3>Industry Trends</h3>
+        <div id="trendsList"><p class="loading">Loading…</p></div>
+      </div>
+      <div class="card">
+        <h3>Competitor Analysis</h3>
+        <div id="competitorAnalysis"><p class="loading">Loading…</p></div>
+      </div>
+      <div class="card">
+        <h3>Price Predictions</h3>
+        <div id="pricePredictions"><p class="loading">Loading…</p></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="tab-finance">
+    <div class="grid grid-2">
+      <div class="card"><h3>Cash Flow Analysis</h3><div id="cashFlow"><p class="loading">Loading…</p></div></div>
+      <div class="card"><h3>Budget Optimization</h3><div id="budgetOpt"><p class="loading">Loading…</p></div></div>
+      <div class="card">
+        <h3>Investment Plan</h3>
+        <div class="form-row">
+          <div class="form-group"><label>Available Capital (₱)</label><input type="number" id="invCapital" placeholder="Auto from profit" /></div>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="loadInvestmentPlan()">Generate Plan</button>
+        <div id="investPlan"></div>
+      </div>
+      <div class="card"><h3>Revenue Forecast</h3><div id="revenueForecast"><p class="loading">Loading…</p></div></div>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="tab-partners">
+    <div class="grid grid-2">
+      <div class="card">
+        <h3>Add Partner</h3>
+        <div class="form-row">
+          <div class="form-group"><label>Type</label>
+            <select id="pType"><option value="supplier">Supplier</option><option value="company">Partner Company</option></select>
+          </div>
+          <div class="form-group"><label>Name</label><input id="pName" placeholder="Partner name" /></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>Contact</label><input id="pContact" placeholder="email / phone" /></div>
+          <div class="form-group"><label>Rating (suppliers)</label><input type="number" id="pRating" min="0" max="5" step="0.5" /></div>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="addPartner()">Add Partner</button>
+        <div id="partnerMsg"></div>
+      </div>
+      <div class="card">
+        <h3>Supplier Management</h3>
+        <div id="supplierSummary"><p class="loading">Loading…</p></div>
+      </div>
+      <div class="card">
+        <h3>Joint Project</h3>
+        <div class="form-group" style="margin-bottom:.5rem"><label>Title</label><input id="projTitle" placeholder="Joint marketing campaign" /></div>
+        <div class="form-row">
+          <div class="form-group"><label>Budget (₱)</label><input type="number" id="projBudget" /></div>
+          <div class="form-group"><label>Partner ID</label><input type="number" id="projPartnerId" placeholder="optional" /></div>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="createProject()">Create Project</button>
+        <div id="projectMsg"></div>
+      </div>
+      <div class="card">
+        <h3>Partners & Projects</h3>
+        <div id="partnersList"><p class="loading">Loading…</p></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="tab-forecast">
+    <div class="card" style="margin-bottom:1rem">
+      <h3>Run Forecast</h3>
+      <div class="form-row">
+        <div class="form-group"><label>Type</label>
+          <select id="fcType">
+            <option value="all">All Forecasts</option><option value="revenue">Revenue</option>
+            <option value="industry">Industry</option><option value="demand">Demand</option><option value="price">Price</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Periods</label><input type="number" id="fcPeriods" value="3" min="1" max="12" /></div>
+        <div class="form-group"><label>Sector</label>
+          <select id="fcSector"><option value="general">General</option><option value="retail">Retail</option><option value="technology">Technology</option></select>
+        </div>
+      </div>
+      <button class="btn btn-primary" onclick="runForecast()">Generate Forecast</button>
+    </div>
+    <div id="forecastResult"><p class="loading">Click Generate Forecast to run.</p></div>
+  </div>
+
+  <div class="tab-panel" id="tab-reports">
+    <div class="grid grid-2">
+      <div class="card">
+        <h3>Generate Report</h3>
+        <div class="form-group" style="margin-bottom:.75rem"><label>Report Type</label>
+          <select id="reportType">
+            <option value="all">All Reports</option><option value="market">Market Report</option>
+            <option value="financial">Financial Report</option><option value="strategic">Strategic Report</option>
+            <option value="risk">Risk Report</option>
+          </select>
+        </div>
+        <button class="btn btn-primary" onclick="generateReport()">Generate</button>
+        <div id="reportResult"></div>
+      </div>
+      <div class="card">
+        <h3>Report History</h3>
+        <div id="reportHistory"><p class="loading">Loading…</p></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="tab-trading">
+    <div class="grid grid-2">
+      <div class="card">
+        <h3>Trade Opportunity Score</h3>
+        <div id="tradeScore"><p class="loading">Loading…</p></div>
+      </div>
+      <div class="card">
+        <h3>Price Benchmarks</h3>
+        <div id="priceBenchmarks"><p class="loading">Loading…</p></div>
+      </div>
+    </div>
+  </div>
+</main>
+<script>
+const API = '';
+let TOKEN = localStorage.getItem('token') || '';
+async function api(path, method='GET', body=null) {
+  const opts = { method, headers: { 'Authorization': `Bearer ${TOKEN}`, 'Content-Type': 'application/json' } };
+  if (body) opts.body = JSON.stringify(body);
+  const r = await fetch(API + path, opts);
+  if (!r.ok) throw new Error((await r.json()).detail || r.statusText);
+  return r.json();
+}
+function fmt(n) { return typeof n === 'number' ? '₱' + n.toLocaleString(undefined,{maximumFractionDigits:2}) : (n ?? '—'); }
+function switchTab(name) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.getAttribute('onclick').includes(`'${name}'`)));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id === 'tab-' + name));
+}
+
+async function loadOverview() {
+  try {
+    const d = await api('/economy/dashboard');
+    const kpis = document.querySelectorAll('#overviewKPIs .kpi');
+    kpis[0].querySelector('.val').textContent = d.markets?.outlook || '—';
+    kpis[1].querySelector('.val').textContent = d.cash_flow?.cash_flow_status || '—';
+    kpis[2].querySelector('.val').textContent = (d.opportunities||[]).length;
+
+    document.getElementById('overviewMarket').innerHTML = `
+      <div class="result-row"><span>Sector Growth</span><span class="result-val">${d.markets?.sector_growth_rate_pct}%</span></div>
+      <div class="result-row"><span>Market Share</span><span class="result-val">${d.markets?.estimated_market_share_pct}%</span></div>
+      <div class="result-row"><span>Competition</span><span class="result-val">${d.markets?.competition_level}</span></div>`;
+
+    document.getElementById('overviewOpps').innerHTML = (d.opportunities||[]).slice(0,4).map(o =>
+      `<div class="item"><div class="item-title"><span class="badge badge-${o.priority}">${o.priority}</span> ${o.title}</div>
+      <div class="item-val">${fmt(o.estimated_value)}</div></div>`).join('') || '<p class="loading">No opportunities.</p>';
+
+    const g = d.growth || {};
+    document.getElementById('overviewGrowth').innerHTML = `
+      <div class="result-row"><span>Stage</span><span class="result-val">${g.growth_stage}</span></div>
+      <div class="result-row"><span>Growth Rate</span><span class="result-val">${g.growth_rate_pct}%</span></div>
+      <div class="result-row"><span>Projected Annual</span><span class="result-val">${fmt(g.projected_annual_revenue)}</span></div>`;
+
+    const p = d.partners || {};
+    document.getElementById('overviewPartners').innerHTML = `
+      <div class="result-row"><span>Total Partners</span><span class="result-val">${p.total_partners}</span></div>
+      <div class="result-row"><span>Active Projects</span><span class="result-val">${p.active_projects}</span></div>
+      <div class="result-row"><span>Collaboration Score</span><span class="result-val">${p.collaboration_score}/100</span></div>`;
+  } catch(e) { console.error(e); }
+}
+
+async function loadMarkets() {
+  try {
+    const [trends, comp, prices] = await Promise.all([
+      api('/economy/markets/trends'),
+      api('/economy/markets/competitor'),
+      api('/economy/markets/prices'),
+    ]);
+    document.getElementById('trendsList').innerHTML = trends.map(t =>
+      `<div class="item"><div class="item-title">${t.trend} <span class="badge badge-teal">${t.sector}</span></div>
+      <div class="item-desc">Growth: ${t.growth_pct}% · ${t.region}</div></div>`).join('');
+    document.getElementById('competitorAnalysis').innerHTML = `
+      <div class="result-row"><span>Position</span><span class="result-val">${comp.market_position}</span></div>
+      ${(comp.competitive_advantages||[]).filter(Boolean).map(s=>`<div class="item-desc">✓ ${s}</div>`).join('')}
+      ${(comp.recommended_actions||[]).map(a=>`<div class="item-val">→ ${a}</div>`).join('')}`;
+    document.getElementById('pricePredictions').innerHTML = prices.length
+      ? prices.map(p=>`<div class="item"><div class="item-title">${p.name}</div>
+        <div class="item-desc">${fmt(p.current_price)} → ${fmt(p.predicted_price)} (${p.change_pct>0?'+':''}${p.change_pct}%)</div></div>`).join('')
+      : '<p class="loading">No products for price prediction.</p>';
+  } catch(e) {}
+}
+
+async function analyzeMarket() {
+  const sector = document.getElementById('marketSector').value;
+  try {
+    const r = await api('/economy/markets/analyze', 'POST', { sector });
+    document.getElementById('marketResult').innerHTML = `
+      <div class="result-box">
+        <div class="result-row"><span>Outlook</span><span class="result-val">${r.outlook}</span></div>
+        <div class="result-row"><span>Market Size Est.</span><span class="result-val">${fmt(r.market_size_estimate)}</span></div>
+        <div class="result-row"><span>Sector Growth</span><span class="result-val">${r.sector_growth_rate_pct}%</span></div>
+        <div class="result-row"><span>Annual Revenue Est.</span><span class="result-val">${fmt(r.annual_revenue_estimate)}</span></div>
+      </div>`;
+  } catch(e) { document.getElementById('marketResult').innerHTML = `<p class="error">${e.message}</p>`; }
+}
+
+async function loadFinance() {
+  try {
+    const [cf, budget, rev] = await Promise.all([
+      api('/economy/finance/cash-flow'),
+      api('/economy/finance/budget'),
+      api('/economy/finance/revenue-forecast?periods=4'),
+    ]);
+    document.getElementById('cashFlow').innerHTML = `
+      <div class="result-row"><span>Inflow</span><span class="result-val">${fmt(cf.monthly_inflow)}</span></div>
+      <div class="result-row"><span>Outflow</span><span class="result-val">${fmt(cf.monthly_outflow)}</span></div>
+      <div class="result-row"><span>Net</span><span class="result-val">${fmt(cf.net_cash_flow)}</span></div>
+      <div class="result-row"><span>Status</span><span class="result-val">${cf.cash_flow_status}</span></div>`;
+    document.getElementById('budgetOpt').innerHTML = `
+      <div class="result-row"><span>Expense Ratio</span><span class="result-val">${budget.expense_ratio_pct}%</span></div>
+      <div class="result-row"><span>Potential Savings</span><span class="result-val">${fmt(budget.potential_savings)}</span></div>
+      ${(budget.optimizations||[]).map(o=>`<div class="item-desc">• ${o}</div>`).join('')}`;
+    document.getElementById('revenueForecast').innerHTML = rev.map(r=>
+      `<div class="item"><div class="item-title">${r.period_label}</div><div class="item-val">${r.formatted}</div>
+      <div class="bar-track"><div class="bar-fill" style="width:${Math.min(r.value/(rev[rev.length-1]?.value||1)*100,100)}%"></div></div></div>`).join('');
+  } catch(e) {}
+}
+
+async function loadInvestmentPlan() {
+  const cap = document.getElementById('invCapital').value;
+  const url = cap ? `/economy/finance/investment-plan?available_capital=${cap}` : '/economy/finance/investment-plan';
+  try {
+    const r = await api(url);
+    document.getElementById('investPlan').innerHTML = `
+      <div class="result-box">
+        <div class="result-row"><span>Capital</span><span class="result-val">${fmt(r.available_capital)}</span></div>
+        ${Object.entries(r.allocations||{}).map(([k,v])=>`<div class="result-row"><span>${k.replace(/_/g,' ')}</span><span class="result-val">${fmt(v)}</span></div>`).join('')}
+      </div>`;
+  } catch(e) {}
+}
+
+async function loadPartners() {
+  try {
+    const [sup, partners, projects] = await Promise.all([
+      api('/economy/partners/suppliers'),
+      api('/economy/partners'),
+      api('/economy/projects'),
+    ]);
+    document.getElementById('supplierSummary').innerHTML = `
+      <div class="result-row"><span>Suppliers</span><span class="result-val">${sup.total_suppliers}</span></div>
+      <div class="result-row"><span>Low Stock Items</span><span class="result-val">${sup.low_stock_items}</span></div>
+      <div class="item-desc">${sup.recommendation}</div>`;
+    document.getElementById('partnersList').innerHTML =
+      partners.map(p=>`<div class="item"><div class="item-title">${p.name} <span class="badge badge-teal">${p.partner_type}</span></div></div>`).join('')
+      + projects.map(p=>`<div class="item"><div class="item-title">${p.title}</div><div class="item-desc">${p.status} · ${fmt(p.budget)}</div></div>`).join('')
+      || '<p class="loading">No partners yet.</p>';
+  } catch(e) {}
+}
+
+async function addPartner() {
+  const body = { partner_type: document.getElementById('pType').value, name: document.getElementById('pName').value,
+    contact: document.getElementById('pContact').value, rating: parseFloat(document.getElementById('pRating').value)||0 };
+  if (!body.name) return;
+  try {
+    await api('/economy/partners', 'POST', body);
+    document.getElementById('partnerMsg').innerHTML = '<span style="color:#22c55e">✓ Added</span>';
+    loadPartners();
+  } catch(e) { document.getElementById('partnerMsg').innerHTML = `<p class="error">${e.message}</p>`; }
+}
+
+async function createProject() {
+  const body = { title: document.getElementById('projTitle').value, budget: parseFloat(document.getElementById('projBudget').value)||0,
+    partner_id: parseInt(document.getElementById('projPartnerId').value)||null };
+  if (!body.title) return;
+  try {
+    await api('/economy/projects', 'POST', body);
+    document.getElementById('projectMsg').innerHTML = '<span style="color:#22c55e">✓ Created</span>';
+    loadPartners();
+  } catch(e) { document.getElementById('projectMsg').innerHTML = `<p class="error">${e.message}</p>`; }
+}
+
+async function runForecast() {
+  const body = { forecast_type: document.getElementById('fcType').value, periods: parseInt(document.getElementById('fcPeriods').value)||3,
+    sector: document.getElementById('fcSector').value };
+  document.getElementById('forecastResult').innerHTML = '<p class="loading">Generating…</p>';
+  try {
+    const r = await api('/economy/forecast', 'POST', body);
+    let html = '<div class="grid grid-2">';
+    const sections = r.results ? { [r.forecast_type]: r.results } : r;
+    for (const [key, items] of Object.entries(sections)) {
+      if (!Array.isArray(items)) continue;
+      html += `<div class="card"><h3>${key}</h3>${items.map(i=>`<div class="item"><div class="item-title">${i.period_label||i.name||'—'}</div>
+        <div class="item-val">${i.formatted||fmt(i.predicted_price||i.value)}</div></div>`).join('')}</div>`;
+    }
+    html += '</div>';
+    document.getElementById('forecastResult').innerHTML = html;
+  } catch(e) { document.getElementById('forecastResult').innerHTML = `<p class="error">${e.message}</p>`; }
+}
+
+async function generateReport() {
+  const type = document.getElementById('reportType').value;
+  document.getElementById('reportResult').innerHTML = '<p class="loading">Generating…</p>';
+  try {
+    const r = await api('/economy/reports', 'POST', { report_type: type });
+    if (type === 'all') {
+      document.getElementById('reportResult').innerHTML = Object.entries(r).map(([k,v])=>
+        `<div class="item"><div class="item-title">${k} report</div><div class="item-desc">${v.summary||'—'}</div></div>`).join('');
+    } else {
+      document.getElementById('reportResult').innerHTML = `<div class="item"><div class="item-title">${r.title}</div><div class="item-desc">${r.summary}</div></div>`;
+    }
+    loadReportHistory();
+  } catch(e) { document.getElementById('reportResult').innerHTML = `<p class="error">${e.message}</p>`; }
+}
+
+async function loadReportHistory() {
+  try {
+    const r = await api('/economy/reports');
+    document.getElementById('reportHistory').innerHTML = (r.recent||[]).map(rep=>
+      `<div class="item"><div class="item-title">${rep.title} <span class="badge badge-teal">${rep.report_type}</span></div>
+      <div class="item-desc">${rep.summary?.slice(0,80)}…</div></div>`).join('') || '<p class="loading">No reports yet.</p>';
+  } catch(e) {}
+}
+
+async function loadTrading() {
+  try {
+    const [score, benchmarks] = await Promise.all([api('/economy/trading/score'), api('/economy/trading/benchmarks')]);
+    document.getElementById('tradeScore').innerHTML = `
+      <div class="kpi"><div class="val">${score.score}</div><div class="lbl">${score.level} opportunity</div></div>
+      <div class="item-desc" style="margin-top:.5rem">${score.message}</div>`;
+    document.getElementById('priceBenchmarks').innerHTML = benchmarks.slice(0,8).map(b=>
+      `<div class="item"><div class="item-title">${b.product}</div>
+      <div class="item-desc">${fmt(b.current_price)} · ${b.position} — ${b.recommendation}</div></div>`).join('') || '<p class="loading">No products.</p>';
+  } catch(e) {}
+}
+
+if (!TOKEN) {
+  document.querySelectorAll('.loading').forEach(el => { el.textContent = 'Not logged in.'; });
+} else {
+  loadOverview(); loadMarkets(); loadFinance(); loadPartners(); loadReportHistory(); loadTrading();
+}
+</script>
+</body>
+</html>

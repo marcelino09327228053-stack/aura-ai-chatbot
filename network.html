@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>MB Future Tech — AI Chatbot | Network</title>
+<style>
+* { box-sizing: border-box; }
+body { font-family: Arial; background: #0f172a; color: white; margin: 0; padding: 20px; }
+.header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+.card { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 20px; margin-bottom: 16px; }
+button, .btn { padding: 10px 14px; border: none; border-radius: 8px; background: #3b82f6; color: white; cursor: pointer; font-weight: bold; text-decoration: none; display: inline-block; margin-right: 8px; margin-bottom: 8px; }
+.btn-secondary { background: #334155; }
+.btn-danger { background: #ef4444; }
+.widgets { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; }
+.widget { background: #334155; border-radius: 8px; padding: 16px; text-align: center; }
+.widget-value { font-size: 22px; font-weight: bold; margin-top: 8px; }
+.item { background: #334155; border-radius: 8px; padding: 12px; margin-bottom: 8px; font-size: 13px; }
+.tag { display: inline-block; background: #1e293b; border-radius: 4px; padding: 2px 8px; font-size: 12px; margin-right: 4px; }
+select { padding: 10px; border: none; border-radius: 8px; background: #0f172a; color: white; margin-bottom: 8px; }
+</style>
+<script src="/static/aura-notifications.js"></script>
+</head>
+<body>
+<div class="header">
+  <h1>🌐 MB Future Tech AI Network</h1>
+  <div>
+    <a href="/os" class="btn btn-secondary">AI Chatbot OS</a>
+    <a href="/dashboard" class="btn btn-secondary">Dashboard</a>
+    <button class="btn-secondary" onclick="logout()">Logout</button>
+  </div>
+</div>
+
+<div class="card">
+  <h2 style="margin-top:0;">Network Status</h2>
+  <div id="statusInfo" style="color:#94a3b8;">Loading...</div>
+  <div class="widgets" id="statusGrid"></div>
+</div>
+
+<div class="card">
+  <h2 style="margin-top:0;">Join / Leave Network</h2>
+  <select id="networkMode">
+    <option value="private">Private (isolated)</option>
+    <option value="shared" selected>Shared Network</option>
+    <option value="enterprise">Enterprise</option>
+  </select>
+  <button onclick="joinNetwork()">Join Network</button>
+  <button onclick="leaveNetwork()" class="btn-danger">Leave Network</button>
+</div>
+
+<div class="card">
+  <h2 style="margin-top:0;">Synchronization</h2>
+  <button onclick="runSync('all')">Sync All</button>
+  <button onclick="runSync('settings')" class="btn-secondary">Settings</button>
+  <button onclick="runSync('knowledge')" class="btn-secondary">Knowledge</button>
+  <button onclick="runSync('plugins')" class="btn-secondary">Plugins</button>
+</div>
+
+<div class="card">
+  <h2 style="margin-top:0;">Distributed Agents</h2>
+  <select id="execMode">
+    <option value="local">Local</option>
+    <option value="cloud">Cloud</option>
+    <option value="remote">Remote</option>
+  </select>
+  <button onclick="runAgent('support')">Run Support (local/cloud/remote)</button>
+</div>
+
+<div class="card">
+  <h2 style="margin-top:0;">Federated Learning</h2>
+  <button onclick="federatedTrain()">Local Train + Contribute</button>
+  <button onclick="federatedAggregate()" class="btn-secondary">View Global Improvements</button>
+  <div id="fedInfo" style="margin-top:12px;color:#94a3b8;"></div>
+</div>
+
+<div class="card">
+  <h2 style="margin-top:0;">Network Analytics</h2>
+  <div id="analyticsInfo"></div>
+</div>
+
+<script>
+function authHeaders() {
+  const token = localStorage.getItem("aura_token");
+  if (!token) { window.location.href = "/login"; return null; }
+  return { "Content-Type": "application/json", "Authorization": "Bearer " + token };
+}
+
+function escapeHtml(t) {
+  return String(t).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+}
+
+function logout() {
+  localStorage.removeItem("aura_token");
+  window.location.href = "/login";
+}
+
+async function loadNetwork() {
+  const headers = authHeaders();
+  if (!headers) return;
+
+  const [statusRes, analyticsRes] = await Promise.all([
+    fetch("/network/status", { headers }),
+    fetch("/network/analytics", { headers })
+  ]);
+
+  if (statusRes.ok) {
+    const s = await statusRes.json();
+    const mode = s.governance ? s.governance.network_mode : "private";
+    document.getElementById("statusInfo").textContent =
+      "Mode: " + mode + " | Node: " + (s.local_node ? s.local_node.node_id : "—");
+    document.getElementById("networkMode").value = mode;
+    document.getElementById("statusGrid").innerHTML = `
+      <div class="widget"><div style="color:#94a3b8;font-size:13px;">Members</div><div class="widget-value">${s.network_members}</div></div>
+      <div class="widget"><div style="color:#94a3b8;font-size:13px;">Nodes</div><div class="widget-value">${s.connected_nodes}</div></div>
+      <div class="widget"><div style="color:#94a3b8;font-size:13px;">Shared</div><div class="widget-value">${s.shared_resources}</div></div>
+    `;
+  }
+
+  if (analyticsRes.ok) {
+    const a = await analyticsRes.json();
+    document.getElementById("analyticsInfo").innerHTML = `
+      <div class="item">Network adoption: <strong>${a.business_insights.network_adoption_rate}%</strong></div>
+      <div class="item">Total syncs: <strong>${a.global_trends.total_syncs}</strong></div>
+      <div class="item">Federated updates: <strong>${a.global_trends.federated_updates}</strong></div>
+      <div class="item">Agent runs: <strong>${a.ai_performance.agent_runs}</strong></div>
+    `;
+  }
+}
+
+async function joinNetwork() {
+  const headers = authHeaders();
+  if (!headers) return;
+  const mode = document.getElementById("networkMode").value;
+  const res = await fetch("/network/join", {
+    method: "POST", headers, body: JSON.stringify({ network_mode: mode })
+  });
+  const data = await res.json();
+  if (!res.ok) { showToast(data.detail || "Join failed."); return; }
+  showToast("Joined network in " + mode + " mode.");
+  loadNetwork();
+}
+
+async function leaveNetwork() {
+  const headers = authHeaders();
+  if (!headers) return;
+  await fetch("/network/leave", { method: "POST", headers });
+  loadNetwork();
+}
+
+async function runSync(type) {
+  const headers = authHeaders();
+  if (!headers) return;
+  const res = await fetch("/network/sync", {
+    method: "POST", headers, body: JSON.stringify({ sync_type: type })
+  });
+  const data = await res.json();
+  if (!res.ok) { showToast(data.detail || "Sync failed."); return; }
+  showToast("Sync complete.");
+  loadNetwork();
+}
+
+async function runAgent(type) {
+  const headers = authHeaders();
+  if (!headers) return;
+  const mode = document.getElementById("execMode").value;
+  const res = await fetch("/network/agents/execute", {
+    method: "POST", headers,
+    body: JSON.stringify({ agent_type: type, text: "Network health check", execution_mode: mode })
+  });
+  const data = await res.json();
+  if (!res.ok) { showToast(data.detail || data.error || "Failed."); return; }
+  showToast("Mode: " + data.execution_mode + "\n\n" + (data.reply || data.note));
+}
+
+async function federatedTrain() {
+  const headers = authHeaders();
+  if (!headers) return;
+  const res = await fetch("/network/federation/train", {
+    method: "POST", headers,
+    body: JSON.stringify({ model_key: "aura_default", metrics: { samples: 50, accuracy: 0.87 } })
+  });
+  const data = await res.json();
+  document.getElementById("fedInfo").textContent =
+    data.trained ? "Contributed hash: " + data.gradient_hash : data.reason;
+}
+
+async function federatedAggregate() {
+  const headers = authHeaders();
+  if (!headers) return;
+  const res = await fetch("/network/federation/aggregate", { headers });
+  const data = await res.json();
+  document.getElementById("fedInfo").textContent =
+    "Contributors: " + data.contributors + ", avg score: " + data.avg_improvement_score;
+}
+
+loadNetwork();
+</script>
+</body>
+</html>

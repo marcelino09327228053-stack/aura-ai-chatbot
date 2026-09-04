@@ -1,0 +1,7 @@
+{
+    "name": "SMS Sender",
+    "version": "1.0.0",
+    "author": "Aura",
+    "description": "Prepare SMS messages from FAQ answers and company info.",
+    "permissions": ["read_faq", "read_company_profile"]
+}

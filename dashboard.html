@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>MB Future Tech — AI Chatbot | Dashboard</title>
+<style>
+* { box-sizing: border-box; }
+body {
+  font-family: Arial;
+  background: #0f172a;
+  color: white;
+  margin: 0;
+  padding: 20px;
+}
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+.header > div {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.header .btn, .header button { margin: 0; }
+.feature-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 12px;
+}
+.feature-card {
+  display: block;
+  padding: 18px;
+  border-radius: 12px;
+  background: linear-gradient(145deg, #312e81, #1e293b);
+  border: 1px solid #6366f1;
+  color: white;
+  text-decoration: none;
+  transition: transform .15s ease, border-color .15s ease;
+}
+.feature-card:hover { transform: translateY(-2px); border-color: #a5b4fc; }
+.feature-card strong { display: block; font-size: 17px; margin-bottom: 6px; }
+.feature-card span { color: #cbd5e1; line-height: 1.4; }
+.new-badge {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: #7c3aed;
+  font-size: 12px;
+  margin-bottom: 8px;
+}
+@media (max-width: 800px) {
+  .header { flex-direction: column; }
+  .header > div { justify-content: flex-start; }
+}
+.card {
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 16px;
+}
+button, .btn {
+  padding: 10px 14px;
+  border: none;
+  border-radius: 8px;
+  background: #3b82f6;
+  color: white;
+  cursor: pointer;
+  font-weight: bold;
+  text-decoration: none;
+  display: inline-block;
+}
+.btn-secondary { background: #334155; }
+.btn-danger { background: #ef4444; }
+input {
+  padding: 10px;
+  border: none;
+  border-radius: 8px;
+  background: #0f172a;
+  color: white;
+  margin-right: 8px;
+}
+.company-item {
+  background: #334155;
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.widgets {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.widget {
+  background: #334155;
+  border-radius: 8px;
+  padding: 16px;
+  text-align: center;
+}
+.widget-value {
+  font-size: 24px;
+  font-weight: bold;
+  margin-top: 8px;
+}
+.chart-bar {
+  background: #334155;
+  border-radius: 6px;
+  margin-bottom: 8px;
+  padding: 8px;
+}
+.chart-fill {
+  height: 8px;
+  background: #3b82f6;
+  border-radius: 4px;
+}
+</style>
+<script src="/static/aura-notifications.js"></script>
+</head>
+<body>
+<div class="header">
+  <h1>🏢 Company Dashboard</h1>
+  <div>
+    <a href="/" class="btn btn-secondary">Chat</a>
+    <a href="/subscription" class="btn btn-secondary">Subscription</a>
+    <a href="/plugins" class="btn btn-secondary">Plugins</a>
+    <a href="/widget" class="btn btn-secondary">Website Widget</a>
+    <a href="/support" class="btn btn-secondary">Support Inbox</a>
+    <a href="/team" class="btn btn-secondary">Team</a>
+    <a href="/crm" class="btn btn-secondary">CRM</a>
+    <a href="/infrastructure" class="btn btn-secondary">Infrastructure</a>
+    <a href="/portal" class="btn btn-secondary">Cloud Portal</a>
+    <a href="/os" class="btn btn-secondary">AI Chatbot OS</a>
+    <a href="/network" class="btn btn-secondary">Network</a>
+    <a href="/intelligence" class="btn btn-secondary">Intelligence</a>
+    <a href="/global" class="btn btn-secondary">Global</a>
+    <a href="/enterprise" class="btn btn-secondary">Enterprise</a>
+    <a href="/corporation" class="btn btn-secondary">Corporation</a>
+    <a href="/economy" class="btn btn-secondary">Economy</a>
+    <a href="/commerce" class="btn btn-secondary">Commerce</a>
+    <a href="/ecosystem" class="btn btn-secondary">Ecosystem</a>
+    <a href="/universe" class="btn btn-secondary">Universe</a>
+    <a href="/civilization" class="btn btn-secondary">Civilization</a>
+    <button class="btn-danger" onclick="logout()">Logout</button>
+  </div>
+</div>
+
+<div class="card">
+  <span class="new-badge">NEW AI CHATBOT TOOLS</span>
+  <h2 style="margin:4px 0 16px;">Customer AI Workspace</h2>
+  <div class="feature-grid">
+    <a href="/support" class="feature-card">
+      <strong>🎧 Support Inbox</strong>
+      <span>View conversations, take over from AI, and reply as a human.</span>
+    </a>
+    <a href="/widget" class="feature-card">
+      <strong>💬 Website Widget</strong>
+      <span>Customize, secure, embed, and monitor the public chatbot.</span>
+    </a>
+    <a href="/team" class="feature-card">
+      <strong>👥 Team Management</strong>
+      <span>Invite teammates, manage roles, and review activity.</span>
+    </a>
+    <a href="/crm" class="feature-card">
+      <strong>🤝 Customer CRM</strong>
+      <span>Manage customers, leads, notes, and contact history.</span>
+    </a>
+  </div>
+</div>
+
+<div class="card">
+  <h2 style="margin-top:0;">Business Overview</h2>
+  <div class="widgets" id="widgetGrid"></div>
+  <div id="chartArea"></div>
+  <div style="margin-top:12px;">
+    <a href="/analytics/widgets" class="btn btn-secondary" style="display:none;" id="widgetsLink">API</a>
+    <button onclick="loadWidgets()">↻ Refresh Metrics</button>
+    <button onclick="downloadReport('excel')" class="btn btn-secondary">Export Excel (CSV)</button>
+    <button onclick="downloadReport('pdf')" class="btn btn-secondary">Export PDF</button>
+  </div>
+</div>
+
+<div class="card">
+  <h2 style="margin-top:0;">AI Agents</h2>
+  <div id="agentStatus" style="color:#94a3b8; margin-bottom:12px;">Loading agents...</div>
+  <div class="widgets" id="agentWidgets"></div>
+  <div id="agentList" style="margin-bottom:12px;"></div>
+  <div style="margin-bottom:12px;">
+    <button onclick="loadAgents()">↻ Refresh Agents</button>
+    <button onclick="runScheduler('daily')" class="btn btn-secondary">Run Daily Report</button>
+    <button onclick="runScheduler('weekly')" class="btn btn-secondary">Run Weekly Report</button>
+  </div>
+  <h3 style="margin-top:0;">Recent Agent Logs</h3>
+  <div id="agentLogs" style="max-height:200px; overflow-y:auto;"></div>
+</div>
+
+<div class="card">
+  <div id="companyList"></div>
+  <div style="margin-top:16px;">
+    <input id="newCompanyName" placeholder="New company name">
+    <button onclick="createCompany()">Add Company</button>
+  </div>
+</div>
+
+<script>
+function authHeaders() {
+  const token = localStorage.getItem("aura_token");
+  if (!token) {
+    window.location.href = "/login";
+    return null;
+  }
+  return {
+    "Content-Type": "application/json",
+    "Authorization": "Bearer " + token
+  };
+}
+
+async function loadCompanies() {
+  const headers = authHeaders();
+  if (!headers) return;
+
+  const res = await fetch("/companies", { headers: headers });
+  if (res.status === 401) {
+    window.location.href = "/login";
+    return;
+  }
+  const companies = await res.json();
+  const activeId = parseInt(localStorage.getItem("aura_company_id") || "0", 10);
+  const list = document.getElementById("companyList");
+
+  if (!companies.length) {
+    list.innerHTML = "<p style='color:#94a3b8;'>No companies yet.</p>";
+    return;
+  }
+
+  list.innerHTML = companies.map(function(c) {
+    const active = c.id === activeId ? " (active)" : "";
+    return `
+      <div class="company-item">
+        <div>
+          <strong>${escapeHtml(c.company_name)}${active}</strong>
+          <div style="color:#94a3b8; font-size:13px;">ID: ${c.id}</div>
+        </div>
+        <button onclick="selectCompany(${c.id})">Select</button>
+      </div>
+    `;
+  }).join("");
+}
+
+async function createCompany() {
+  const headers = authHeaders();
+  if (!headers) return;
+  const name = document.getElementById("newCompanyName").value.trim();
+  if (!name) return showToast("Enter a company name.");
+
+  const res = await fetch("/companies", {
+    method: "POST",
+    headers: headers,
+    body: JSON.stringify({ company_name: name })
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    showToast(data.detail || "Failed to create company.");
+    return;
+  }
+  document.getElementById("newCompanyName").value = "";
+  loadCompanies();
+}
+
+async function selectCompany(id) {
+  const headers = authHeaders();
+  if (!headers) return;
+
+  const res = await fetch("/auth/select-company", {
+    method: "POST",
+    headers: headers,
+    body: JSON.stringify({ company_id: id })
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    showToast(data.detail || "Failed to select company.");
+    return;
+  }
+  localStorage.setItem("aura_token", data.token);
+  localStorage.setItem("aura_company_id", data.company.id);
+  loadCompanies();
+}
+
+function logout() {
+  localStorage.removeItem("aura_token");
+  localStorage.removeItem("aura_company_id");
+  fetch("/auth/logout", { method: "POST" });
+  window.location.href = "/login";
+}
+
+function escapeHtml(text) {
+  return String(text)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+loadCompanies();
+loadWidgets();
+loadAgents();
+
+async function loadAgents() {
+  const headers = authHeaders();
+  if (!headers) return;
+
+  try {
+    const res = await fetch("/agents/dashboard", { headers: headers });
+    if (!res.ok) {
+      document.getElementById("agentStatus").textContent = "Agents unavailable.";
+      return;
+    }
+
+    const data = await res.json();
+    document.getElementById("agentStatus").textContent =
+      data.agents_enabled ? "Agent platform enabled" : "Agent platform disabled (set AGENTS_ENABLED=true)";
+
+    const widgets = document.getElementById("agentWidgets");
+    widgets.innerHTML = `
+      <div class="widget">
+        <div style="color:#94a3b8; font-size:13px;">Memories</div>
+        <div class="widget-value">${formatNumber(data.memory_count)}</div>
+      </div>
+      <div class="widget">
+        <div style="color:#94a3b8; font-size:13px;">API Messages Today</div>
+        <div class="widget-value">${formatNumber(data.messages_today)}</div>
+      </div>
+      <div class="widget">
+        <div style="color:#94a3b8; font-size:13px;">Scheduler Tasks</div>
+        <div class="widget-value">${formatNumber((data.scheduler_tasks || []).length)}</div>
+      </div>
+      <div class="widget">
+        <div style="color:#94a3b8; font-size:13px;">Reminders</div>
+        <div class="widget-value">${formatNumber((data.reminders || []).length)}</div>
+      </div>
+    `;
+
+    document.getElementById("agentList").innerHTML = (data.agents || []).map(function(agent) {
+      const status = agent.enabled ? "ON" : "OFF";
+      const btnClass = agent.enabled ? "btn-danger" : "";
+      return `
+        <div class="company-item">
+          <div>
+            <strong>${escapeHtml(agent.name)}</strong>
+            <div style="color:#94a3b8; font-size:13px;">${escapeHtml(agent.type)} — ${status}</div>
+          </div>
+          <button class="${btnClass}" onclick="toggleAgent('${agent.type}', ${!agent.enabled})">
+            ${agent.enabled ? "Disable" : "Enable"}
+          </button>
+        </div>
+      `;
+    }).join("");
+
+    document.getElementById("agentLogs").innerHTML = (data.recent_logs || []).length
+      ? data.recent_logs.map(function(log) {
+          return `
+            <div style="background:#334155; border-radius:8px; padding:10px; margin-bottom:8px; font-size:13px;">
+              <strong>${escapeHtml(log.agent_type)}</strong> via ${escapeHtml(log.reply_source)}
+              <div style="color:#94a3b8;">${escapeHtml(log.user_message || "")}</div>
+            </div>
+          `;
+        }).join("")
+      : "<p style='color:#94a3b8;'>No agent logs yet.</p>";
+  } catch (e) {
+    document.getElementById("agentStatus").textContent = "Failed to load agents.";
+  }
+}
+
+async function toggleAgent(type, enabled) {
+  const headers = authHeaders();
+  if (!headers) return;
+
+  const res = await fetch("/agents/" + type + "/toggle", {
+    method: "PUT",
+    headers: headers,
+    body: JSON.stringify({ enabled: enabled })
+  });
+  if (!res.ok) {
+    showToast("Failed to update agent.");
+    return;
+  }
+  loadAgents();
+}
+
+async function runScheduler(kind) {
+  const headers = authHeaders();
+  if (!headers) return;
+
+  const url = kind === "weekly" ? "/agents/scheduler/weekly" : "/agents/scheduler/daily";
+  const res = await fetch(url, { method: "POST", headers: headers });
+  if (!res.ok) {
+    showToast("Scheduler run failed.");
+    return;
+  }
+  showToast((kind === "weekly" ? "Weekly" : "Daily") + " report generated.");
+  loadAgents();
+}
+
+async function loadWidgets() {
+  const headers = authHeaders();
+  if (!headers) return;
+
+  const token = localStorage.getItem("aura_token");
+
+  try {
+    const [widgetsRes, chartsRes] = await Promise.all([
+      fetch("/analytics/widgets", { headers: headers }),
+      fetch("/analytics/charts", { headers: headers })
+    ]);
+
+    if (!widgetsRes.ok) return;
+
+    const widgets = await widgetsRes.json();
+    const grid = document.getElementById("widgetGrid");
+    grid.innerHTML = Object.keys(widgets).map(function(key) {
+      const w = widgets[key];
+      return `
+        <div class="widget">
+          <div style="color:#94a3b8; font-size:13px;">${escapeHtml(w.label)}</div>
+          <div class="widget-value">${formatNumber(w.value)}</div>
+        </div>
+      `;
+    }).join("");
+
+    if (chartsRes.ok) {
+      const charts = await chartsRes.json();
+      const chart = charts.revenue_vs_expenses;
+      const max = Math.max.apply(null, chart.values.concat([1]));
+      document.getElementById("chartArea").innerHTML = chart.labels.map(function(label, i) {
+        const pct = Math.round((chart.values[i] / max) * 100);
+        return `
+          <div class="chart-bar">
+            <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+              <span>${escapeHtml(label)}</span>
+              <span>${formatNumber(chart.values[i])}</span>
+            </div>
+            <div class="chart-fill" style="width:${pct}%;"></div>
+          </div>
+        `;
+      }).join("");
+    }
+  } catch (e) {
+    document.getElementById("widgetGrid").innerHTML =
+      "<p style='color:#94a3b8;'>Business modules unavailable.</p>";
+  }
+}
+
+function formatNumber(n) {
+  if (typeof n === "number") {
+    return n.toLocaleString(undefined, { maximumFractionDigits: 2 });
+  }
+  return n;
+}
+
+async function downloadReport(type) {
+  const headers = authHeaders();
+  if (!headers) return;
+  const url = type === "pdf" ? "/reports/export/pdf" : "/reports/export/excel";
+  const res = await fetch(url, { headers: headers });
+  if (!res.ok) {
+    showToast("Export failed.");
+    return;
+  }
+  const blob = await res.blob();
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = type === "pdf" ? "aura-report.pdf" : "aura-report.csv";
+  link.click();
+}
+</script>
+</body>
+</html>

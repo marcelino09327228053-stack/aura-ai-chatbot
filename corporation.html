@@ -1,0 +1,831 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MB Future Tech — AI Chatbot | Executive Command Centre</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, sans-serif; background: #05080f; color: #e2e8f0; min-height: 100vh; }
+
+    header {
+      background: linear-gradient(135deg, #0f172a 0%, #1e1035 40%, #0c1a2e 100%);
+      padding: 1.25rem 2rem; display: flex; align-items: center; gap: 1rem;
+      border-bottom: 1px solid #1e2a4a;
+    }
+    header h1 { font-size: 1.4rem; font-weight: 700; flex: 1; }
+    header small { display: block; opacity: .65; font-size: .8rem; }
+    .header-nav a { color: #94a3b8; font-size: .85rem; text-decoration: none; margin-left: 1rem; }
+    .header-nav a:hover { color: #fff; }
+
+    main { max-width: 1280px; margin: 1.5rem auto; padding: 0 1.5rem; }
+
+    .tabs { display: flex; gap: .4rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+    .tab-btn {
+      padding: .45rem 1rem; border-radius: 6px; border: 1px solid #1e2a4a;
+      background: #0c1220; color: #94a3b8; cursor: pointer; font-size: .85rem; transition: all .15s;
+    }
+    .tab-btn.active { background: #7c3aed; color: #fff; border-color: #7c3aed; }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    .grid { display: grid; gap: 1rem; }
+    .grid-2 { grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
+    .grid-3 { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+    .grid-5 { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+
+    .card {
+      background: #0c1220; border: 1px solid #1e2a4a; border-radius: 10px; padding: 1.25rem;
+    }
+    .card h3 { font-size: .95rem; font-weight: 600; margin-bottom: .75rem; color: #a78bfa; }
+
+    /* Agent cards */
+    .agent-card {
+      background: #0c1220; border: 1px solid #1e2a4a; border-radius: 10px;
+      padding: 1rem; text-align: center; cursor: pointer; transition: all .2s;
+    }
+    .agent-card:hover { border-color: #7c3aed; background: #13193a; }
+    .agent-card.active { border-color: #7c3aed; background: #160d30; }
+    .agent-emoji { font-size: 2rem; margin-bottom: .4rem; }
+    .agent-title { font-size: .82rem; font-weight: 700; color: #e2e8f0; }
+    .agent-domain { font-size: .72rem; color: #64748b; margin-top: .2rem; }
+
+    .agent-response {
+      background: #05080f; border: 1px solid #1e2a4a; border-radius: 8px;
+      padding: 1rem; margin-top: 1rem;
+    }
+    .agent-response h4 { color: #a78bfa; margin-bottom: .5rem; font-size: .9rem; }
+    .agent-response .body { font-size: .84rem; color: #cbd5e1; line-height: 1.7; white-space: pre-wrap; }
+
+    /* Scores */
+    .score-bar-wrap { margin-bottom: .5rem; }
+    .score-bar-label { display: flex; justify-content: space-between; font-size: .78rem; color: #94a3b8; margin-bottom: .2rem; }
+    .bar-track { height: 7px; background: #1e2a4a; border-radius: 4px; }
+    .bar-fill { height: 7px; border-radius: 4px; transition: width .4s; }
+
+    /* Risk */
+    .risk-item { padding: .7rem 0; border-bottom: 1px solid #1e2a4a; }
+    .risk-item:last-child { border-bottom: none; }
+    .risk-title { font-weight: 600; font-size: .875rem; margin-bottom: .25rem; }
+    .risk-desc { font-size: .78rem; color: #94a3b8; }
+    .risk-mit { font-size: .76rem; color: #34d399; margin-top: .25rem; }
+
+    /* Investment */
+    .inv-row { display: flex; justify-content: space-between; padding: .35rem 0; border-bottom: 1px solid #1e2a4a; font-size: .84rem; }
+    .inv-row:last-child { border-bottom: none; }
+    .inv-val { color: #a78bfa; font-weight: 600; }
+
+    /* Decisions */
+    .dec-item { padding: .7rem 0; border-bottom: 1px solid #1e2a4a; }
+    .dec-item:last-child { border-bottom: none; }
+    .dec-header { display: flex; justify-content: space-between; margin-bottom: .25rem; }
+    .dec-title { font-weight: 600; font-size: .875rem; }
+    .dec-body { font-size: .78rem; color: #94a3b8; line-height: 1.5; }
+
+    /* Negotiations */
+    .neg-item { padding: .7rem 0; border-bottom: 1px solid #1e2a4a; }
+    .neg-item:last-child { border-bottom: none; }
+
+    /* Forms */
+    .form-row { display: flex; flex-wrap: wrap; gap: .6rem; margin-bottom: .75rem; }
+    .form-group { display: flex; flex-direction: column; gap: .3rem; flex: 1; min-width: 140px; }
+    .form-group label { font-size: .78rem; color: #a78bfa; }
+    .form-group input, .form-group select, .form-group textarea {
+      background: #05080f; border: 1px solid #1e2a4a; color: #e2e8f0;
+      border-radius: 6px; padding: .45rem .7rem; font-size: .84rem;
+    }
+    textarea { resize: vertical; min-height: 80px; font-family: inherit; }
+
+    .btn { display: inline-flex; align-items: center; gap: .4rem;
+      padding: .45rem 1.05rem; border-radius: 6px; border: none;
+      font-size: .84rem; font-weight: 600; cursor: pointer; transition: all .15s; }
+    .btn-primary { background: #7c3aed; color: #fff; }
+    .btn-primary:hover { background: #9333ea; }
+    .btn-sm { padding: .3rem .7rem; font-size: .78rem; }
+    .btn-outline { background: transparent; border: 1px solid #1e2a4a; color: #94a3b8; }
+    .btn-outline:hover { border-color: #7c3aed; color: #a78bfa; }
+    .btn-danger { background: #7f1d1d; color: #fca5a5; border: 1px solid #ef4444; }
+
+    .badge { display: inline-block; padding: .18rem .52rem; border-radius: 999px; font-size: .7rem; font-weight: 700; }
+    .badge-critical { background: #7f1d1d; color: #fca5a5; }
+    .badge-high { background: #7f1d1d; color: #fca5a5; }
+    .badge-medium { background: #78350f; color: #fcd34d; }
+    .badge-low { background: #14532d; color: #86efac; }
+    .badge-blue { background: #1e3a8a; color: #93c5fd; }
+    .badge-purple { background: #3b0764; color: #d8b4fe; }
+    .badge-green { background: #14532d; color: #86efac; }
+
+    .result-box { margin-top: .75rem; background: #05080f; border: 1px solid #1e2a4a; border-radius: 8px; padding: 1rem; }
+    .result-row { display: flex; justify-content: space-between; padding: .3rem 0; border-bottom: 1px solid #0c1220; font-size: .83rem; }
+    .result-row:last-child { border-bottom: none; }
+    .result-val { color: #a78bfa; font-weight: 600; }
+
+    .kpi-mini { background: #0c1220; border: 1px solid #1e2a4a; border-radius: 8px; padding: .75rem; text-align: center; }
+    .kpi-mini .val { font-size: 1.4rem; font-weight: 700; color: #a78bfa; }
+    .kpi-mini .lbl { font-size: .72rem; color: #64748b; margin-top: .15rem; }
+
+    .loading { color: #475569; font-style: italic; font-size: .84rem; }
+    .error { color: #f87171; font-size: .83rem; padding: .5rem; background: #7f1d1d22; border-radius: 6px; margin-top: .4rem; }
+    .success { color: #22c55e; font-size: .83rem; }
+
+    .thinking { color: #a78bfa; font-style: italic; animation: pulse 1.4s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1}50%{opacity:.4} }
+
+    .clause-list li { font-size: .82rem; color: #94a3b8; padding: .2rem 0; margin-left: 1.2rem; line-height: 1.5; }
+    .red-flag { font-size: .78rem; color: #f87171; padding: .15rem 0; }
+  </style>
+</head>
+<body>
+<header>
+  <div style="flex:1">
+    <h1>🏢 MB Future Tech Corporation</h1>
+    <small>Autonomous C-Suite · Decisions · Investments · Risk Management</small>
+  </div>
+  <nav class="header-nav">
+    <a href="/dashboard">Dashboard</a>
+    <a href="/enterprise">Enterprise</a>
+    <a href="/intelligence">Intelligence</a>
+  </nav>
+</header>
+
+<main>
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('exec')">Executive</button>
+    <button class="tab-btn" onclick="switchTab('agents')">C-Suite Agents</button>
+    <button class="tab-btn" onclick="switchTab('decisions')">Decisions</button>
+    <button class="tab-btn" onclick="switchTab('risks')">Risk Register</button>
+    <button class="tab-btn" onclick="switchTab('investments')">Investments</button>
+    <button class="tab-btn" onclick="switchTab('negotiations')">Negotiations</button>
+    <button class="tab-btn" onclick="switchTab('audit')">Audit</button>
+  </div>
+
+  <!-- Executive Overview -->
+  <div class="tab-panel active" id="tab-exec">
+    <div class="grid grid-3" id="execKPIs" style="margin-bottom:1rem">
+      <div class="kpi-mini"><div class="val loading">…</div><div class="lbl">Business Score</div></div>
+      <div class="kpi-mini"><div class="val loading">…</div><div class="lbl">Risk Level</div></div>
+      <div class="kpi-mini"><div class="val loading">…</div><div class="lbl">Investments Tracked</div></div>
+    </div>
+    <div class="grid grid-2">
+      <div class="card">
+        <h3>Business Analysis</h3>
+        <div id="execAnalysis"><p class="loading">Loading…</p></div>
+      </div>
+      <div class="card">
+        <h3>Top Risks</h3>
+        <div id="execRisks"><p class="loading">Loading…</p></div>
+      </div>
+      <div class="card">
+        <h3>Investment Recommendations</h3>
+        <div id="execInvRecs"><p class="loading">Loading…</p></div>
+      </div>
+      <div class="card">
+        <h3>Recent Executive Decisions</h3>
+        <div id="execDecisions"><p class="loading">Loading…</p></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- C-Suite Agents -->
+  <div class="tab-panel" id="tab-agents">
+    <div class="grid grid-5" id="agentCards" style="margin-bottom:1rem"></div>
+    <div class="grid grid-2">
+      <div class="card">
+        <h3>Ask Executive Agent</h3>
+        <div class="form-group" style="margin-bottom:.75rem">
+          <label>Agent</label>
+          <select id="agentSelect">
+            <option value="ceo">👔 CEO — Strategy</option>
+            <option value="cfo">💰 CFO — Finance</option>
+            <option value="coo">⚙️ COO — Operations</option>
+            <option value="cto">💻 CTO — Technology</option>
+            <option value="cmo">📣 CMO — Marketing</option>
+          </select>
+        </div>
+        <div class="form-group" style="margin-bottom:.75rem">
+          <label>Question (optional — leave blank for general briefing)</label>
+          <textarea id="agentQ" placeholder="e.g. What should we focus on to reach ₱1M revenue?"></textarea>
+        </div>
+        <button class="btn btn-primary" onclick="runAgent()">Ask Agent</button>
+        <div id="agentResult"></div>
+      </div>
+      <div class="card">
+        <h3>C-Suite Briefing</h3>
+        <p style="font-size:.84rem;color:#94a3b8;margin-bottom:.75rem">Run all five executive agents simultaneously for a complete corporate briefing.</p>
+        <button class="btn btn-primary" onclick="runBriefing()">Run Full C-Suite Briefing</button>
+        <div id="briefingResult"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Decisions -->
+  <div class="tab-panel" id="tab-decisions">
+    <div class="grid grid-2">
+      <div class="card">
+        <h3>Run Decision Analysis</h3>
+        <div class="form-group" style="margin-bottom:.75rem">
+          <label>Decision Type</label>
+          <select id="decType">
+            <option value="business_analysis">Business Analysis</option>
+            <option value="investment">Investment Recommendations</option>
+            <option value="expansion">Expansion Planning</option>
+          </select>
+        </div>
+        <button class="btn btn-primary" onclick="runDecision()">Analyse</button>
+        <div id="decResult"></div>
+      </div>
+      <div class="card">
+        <h3>Decision Log</h3>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Filter by Agent</label>
+            <select id="decFilter" onchange="loadDecisions()">
+              <option value="">All Agents</option>
+              <option value="ceo">CEO</option><option value="cfo">CFO</option>
+              <option value="coo">COO</option><option value="cto">CTO</option>
+              <option value="cmo">CMO</option><option value="system">System</option>
+            </select>
+          </div>
+        </div>
+        <div id="decLog"><p class="loading">Loading…</p></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Risks -->
+  <div class="tab-panel" id="tab-risks">
+    <div class="grid grid-3" id="riskKPIs" style="margin-bottom:1rem">
+      <div class="kpi-mini"><div class="val loading">…</div><div class="lbl">Overall Risk</div></div>
+      <div class="kpi-mini"><div class="val loading">…</div><div class="lbl">Critical Risks</div></div>
+      <div class="kpi-mini"><div class="val loading">…</div><div class="lbl">Total Risks</div></div>
+    </div>
+    <div class="grid grid-2">
+      <div class="card">
+        <h3>Risk Assessment</h3>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Category</label>
+            <select id="riskCat">
+              <option value="all">All Categories</option>
+              <option value="financial">Financial</option>
+              <option value="operational">Operational</option>
+              <option value="security">Security</option>
+              <option value="compliance">Compliance</option>
+            </select>
+          </div>
+        </div>
+        <button class="btn btn-primary" onclick="runRiskAssessment()">Run Assessment</button>
+        <div id="riskList" style="margin-top:.75rem"><p class="loading">Loading…</p></div>
+      </div>
+      <div class="card">
+        <h3>Risk Register</h3>
+        <div id="riskRegister"><p class="loading">Loading…</p></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Investments -->
+  <div class="tab-panel" id="tab-investments">
+    <div class="grid grid-2">
+      <div class="card">
+        <h3>ROI Calculator</h3>
+        <div class="form-row">
+          <div class="form-group"><label>Investment Name</label><input id="roiName" placeholder="Digital Marketing Campaign" /></div>
+          <div class="form-group"><label>Type</label>
+            <select id="roiType">
+              <option value="marketing">Marketing</option><option value="capex">CapEx</option>
+              <option value="technology">Technology</option><option value="training">Training</option>
+              <option value="inventory">Inventory</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>Investment Amount (₱)</label><input type="number" id="roiAmount" placeholder="50000" /></div>
+          <div class="form-group"><label>Expected Annual Return (₱)</label><input type="number" id="roiReturn" placeholder="150000" /></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>Duration (years)</label><input type="number" id="roiYears" value="1" min="0.5" max="10" step="0.5" /></div>
+          <div class="form-group"><label>Risk Level</label>
+            <select id="roiRisk"><option value="low">Low</option><option value="medium" selected>Medium</option><option value="high">High</option></select>
+          </div>
+        </div>
+        <button class="btn btn-primary" onclick="calcROI()">Calculate ROI</button>
+        <div id="roiResult"></div>
+      </div>
+      <div class="card">
+        <h3>Budget Allocation</h3>
+        <div class="form-row">
+          <div class="form-group"><label>Total Budget (₱)</label><input type="number" id="budgetAmount" placeholder="500000" /></div>
+          <div class="form-group"><label>Business Stage</label>
+            <select id="budgetStage">
+              <option value="startup">Startup</option><option value="growth" selected>Growth</option>
+              <option value="mature">Mature</option><option value="lean">Lean</option>
+            </select>
+          </div>
+        </div>
+        <button class="btn btn-primary" onclick="allocateBudget()">Allocate Budget</button>
+        <div id="budgetResult"></div>
+      </div>
+      <div class="card">
+        <h3>Capital Plan</h3>
+        <div class="form-row">
+          <div class="form-group"><label>Growth Target (%)</label><input type="number" id="capGrowth" value="20" /></div>
+          <div class="form-group"><label>Planning Horizon (months)</label><input type="number" id="capMonths" value="12" /></div>
+        </div>
+        <button class="btn btn-primary" onclick="capitalPlan()">Generate Capital Plan</button>
+        <div id="capitalResult"></div>
+      </div>
+      <div class="card">
+        <h3>Investment Portfolio</h3>
+        <div id="investPortfolio"><p class="loading">Loading…</p></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Negotiations -->
+  <div class="tab-panel" id="tab-negotiations">
+    <div class="grid grid-2">
+      <div class="card">
+        <h3>Supplier Negotiation</h3>
+        <div class="form-row">
+          <div class="form-group"><label>Supplier Name</label><input id="supName" placeholder="ABC Supplies Co." /></div>
+          <div class="form-group"><label>Product/Service</label><input id="supProduct" placeholder="Raw materials" /></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>Current Price (₱)</label><input type="number" id="supPrice" placeholder="10000" /></div>
+          <div class="form-group"><label>Target Discount (%)</label><input type="number" id="supDiscount" value="10" /></div>
+        </div>
+        <button class="btn btn-primary" onclick="supplierNeg()">Generate Strategy</button>
+        <div id="supResult"></div>
+      </div>
+      <div class="card">
+        <h3>Customer Proposal</h3>
+        <div class="form-row">
+          <div class="form-group"><label>Customer Name</label><input id="custName" placeholder="Client Corp" /></div>
+          <div class="form-group"><label>Deal Value (₱)</label><input type="number" id="custValue" placeholder="100000" /></div>
+        </div>
+        <button class="btn btn-primary" onclick="customerProposal()">Generate Proposal</button>
+        <div id="custResult"></div>
+      </div>
+      <div class="card">
+        <h3>Contract Recommendations</h3>
+        <div class="form-group" style="margin-bottom:.75rem">
+          <label>Contract Type</label>
+          <select id="contractType">
+            <option value="freelancer">Freelancer / Contractor</option>
+            <option value="supplier">Supplier / Vendor</option>
+            <option value="employment">Employment</option>
+            <option value="saas">SaaS / Software</option>
+          </select>
+        </div>
+        <button class="btn btn-primary" onclick="contractRec()">Get Recommendation</button>
+        <div id="contractResult"></div>
+      </div>
+      <div class="card">
+        <h3>Negotiation History</h3>
+        <div id="negHistory"><p class="loading">Loading…</p></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Audit -->
+  <div class="tab-panel" id="tab-audit">
+    <div class="card">
+      <h3>Corporation Audit Log</h3>
+      <div id="auditLog"><p class="loading">Loading…</p></div>
+    </div>
+  </div>
+</main>
+
+<script>
+const API = '';
+let TOKEN = localStorage.getItem('token') || '';
+
+async function api(path, method = 'GET', body = null) {
+  const opts = {
+    method,
+    headers: { 'Authorization': `Bearer ${TOKEN}`, 'Content-Type': 'application/json' },
+  };
+  if (body) opts.body = JSON.stringify(body);
+  const r = await fetch(API + path, opts);
+  if (!r.ok) throw new Error((await r.json()).detail || r.statusText);
+  return r.json();
+}
+
+function fmt(n) {
+  if (typeof n !== 'number') return n ?? '—';
+  return '₱' + n.toLocaleString(undefined, { maximumFractionDigits: 2 });
+}
+
+function switchTab(name) {
+  document.querySelectorAll('.tab-btn').forEach(b => {
+    b.classList.toggle('active', b.getAttribute('onclick').includes(`'${name}'`));
+  });
+  document.querySelectorAll('.tab-panel').forEach(p => {
+    p.classList.toggle('active', p.id === 'tab-' + name);
+  });
+}
+
+// ── Executive Overview ────────────────────────────────────────────────────────
+
+async function loadExec() {
+  try {
+    const d = await api('/corporation/dashboard');
+    const analysis = d.business_analysis || {};
+    const riskSum = d.risk_summary || {};
+    const investments = d.investments || {};
+
+    const kpis = document.querySelectorAll('#execKPIs .kpi-mini');
+    if (kpis[0]) kpis[0].querySelector('.val').textContent = analysis.overall_score + '%';
+    if (kpis[1]) {
+      const rl = riskSum.overall_level || 'low';
+      kpis[1].querySelector('.val').innerHTML = `<span class="badge badge-${rl === 'critical' ? 'critical' : rl}">${rl.toUpperCase()}</span>`;
+    }
+    if (kpis[2]) kpis[2].querySelector('.val').textContent = investments.count ?? 0;
+
+    // Analysis scores
+    document.getElementById('execAnalysis').innerHTML = `
+      ${['financial','growth','operations'].map(dim => {
+        const v = analysis[dim] || {};
+        const pct = (v.score / v.max * 100) || 0;
+        return `<div class="score-bar-wrap">
+          <div class="score-bar-label"><span>${dim.charAt(0).toUpperCase()+dim.slice(1)}</span><span>${v.score}/${v.max}</span></div>
+          <div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:${pct>=70?'#22c55e':pct>=40?'#f59e0b':'#ef4444'}"></div></div>
+        </div>`;
+      }).join('')}
+      ${(analysis.strengths||[]).length ? `<div style="margin-top:.75rem"><div style="font-size:.74rem;color:#22c55e;margin-bottom:.3rem">Strengths</div>${analysis.strengths.map(s=>`<div style="font-size:.78rem;color:#94a3b8;padding:.1rem 0">✓ ${s}</div>`).join('')}</div>` : ''}
+      ${(analysis.weaknesses||[]).length ? `<div style="margin-top:.5rem"><div style="font-size:.74rem;color:#f87171;margin-bottom:.3rem">Weaknesses</div>${analysis.weaknesses.map(s=>`<div style="font-size:.78rem;color:#94a3b8;padding:.1rem 0">✗ ${s}</div>`).join('')}</div>` : ''}`;
+
+    // Top risks
+    document.getElementById('execRisks').innerHTML = (riskSum.top_risks || []).map(r =>
+      `<div class="risk-item">
+        <div class="risk-title"><span class="badge badge-${r.risk_score >= 6 ? 'critical' : r.risk_score >= 3 ? 'medium' : 'low'}">${r.risk_type}</span> ${r.title}</div>
+        <div class="risk-desc">${r.description}</div>
+        <div class="risk-mit">→ ${r.mitigation}</div>
+      </div>`).join('') || '<p class="success">✓ No critical risks flagged</p>';
+
+    // Investment recs
+    document.getElementById('execInvRecs').innerHTML = (d.investment_recommendations || []).slice(0,4).map(r =>
+      `<div class="risk-item">
+        <div class="risk-title"><span class="badge badge-${r.priority === 'high' ? 'high' : 'medium'}">${r.priority}</span> ${r.title}</div>
+        <div class="risk-desc">${r.description}</div>
+        ${r.suggested_amount ? `<div class="risk-mit">Suggested: ${fmt(r.suggested_amount)} · ROI: ${r.expected_roi_pct}%</div>` : ''}
+      </div>`).join('');
+
+    // Recent decisions
+    document.getElementById('execDecisions').innerHTML = (d.recent_decisions || []).slice(0,4).map(d =>
+      `<div class="dec-item">
+        <div class="dec-header"><span class="dec-title">${d.title?.slice(0,50)}</span><span class="badge badge-purple">${d.agent_role}</span></div>
+        <div class="dec-body">${d.recommendation?.slice(0,120)}…</div>
+      </div>`).join('') || '<p class="loading">No decisions yet.</p>';
+
+  } catch(e) { console.error(e); }
+}
+
+// ── Agents ────────────────────────────────────────────────────────────────────
+
+async function loadAgentCards() {
+  try {
+    const agents = await api('/corporation/agents');
+    document.getElementById('agentCards').innerHTML = agents.map(a =>
+      `<div class="agent-card" onclick="selectAgent('${a.role}')">
+        <div class="agent-emoji">${a.emoji}</div>
+        <div class="agent-title">${a.title}</div>
+        <div class="agent-domain">${a.domain}</div>
+      </div>`).join('');
+  } catch(e) {}
+}
+
+function selectAgent(role) {
+  document.querySelectorAll('.agent-card').forEach(c => c.classList.remove('active'));
+  const cards = document.querySelectorAll('.agent-card');
+  cards.forEach(c => { if (c.onclick?.toString().includes(role)) c.classList.add('active'); });
+  document.getElementById('agentSelect').value = role;
+}
+
+async function runAgent() {
+  const role = document.getElementById('agentSelect').value;
+  const q = document.getElementById('agentQ').value;
+  document.getElementById('agentResult').innerHTML = '<p class="thinking">Agent thinking…</p>';
+  try {
+    const r = await api('/corporation/agents/run', 'POST', { agent_role: role, question: q || null });
+    document.getElementById('agentResult').innerHTML = `
+      <div class="agent-response">
+        <h4>${r.agent?.emoji} ${r.agent?.title} Response</h4>
+        <div class="body">${r.analysis}</div>
+      </div>`;
+  } catch(e) {
+    document.getElementById('agentResult').innerHTML = `<p class="error">${e.message}</p>`;
+  }
+}
+
+async function runBriefing() {
+  document.getElementById('briefingResult').innerHTML = '<p class="thinking">All 5 agents running…</p>';
+  try {
+    const results = await api('/corporation/agents/briefing', 'POST');
+    document.getElementById('briefingResult').innerHTML = Object.entries(results).map(([role, r]) =>
+      `<div class="agent-response" style="margin-bottom:.5rem">
+        <h4>${r.agent?.emoji || ''} ${r.agent?.title || role}</h4>
+        <div class="body" style="font-size:.78rem">${(r.analysis || r.error || '').slice(0,300)}…</div>
+      </div>`).join('');
+  } catch(e) {
+    document.getElementById('briefingResult').innerHTML = `<p class="error">${e.message}</p>`;
+  }
+}
+
+// ── Decisions ─────────────────────────────────────────────────────────────────
+
+async function runDecision() {
+  const type = document.getElementById('decType').value;
+  document.getElementById('decResult').innerHTML = '<p class="thinking">Analysing…</p>';
+  try {
+    const r = await api('/corporation/decisions', 'POST', { decision_type: type });
+    let html = '<div class="result-box">';
+    Object.entries(r).forEach(([k, v]) => {
+      if (Array.isArray(v)) {
+        html += `<div style="font-size:.78rem;color:#a78bfa;margin:.5rem 0">${k.replace(/_/g,' ')}</div>`;
+        v.forEach(item => {
+          if (typeof item === 'string') html += `<div style="font-size:.78rem;color:#94a3b8;padding:.1rem 0">• ${item}</div>`;
+          else html += `<div class="result-row"><span>${item.item||item.milestone||item.title||item.option||JSON.stringify(item).slice(0,40)}</span><span class="result-val">${item.met===true?'✓':item.met===false?'✗':item.timeline||item.feasibility||''}</span></div>`;
+        });
+      } else if (typeof v === 'object' && v !== null) {
+        html += `<div class="result-row"><span>${k.replace(/_/g,' ')}</span><span class="result-val">${JSON.stringify(v).slice(0,60)}</span></div>`;
+      } else {
+        html += `<div class="result-row"><span>${k.replace(/_/g,' ')}</span><span class="result-val">${v}</span></div>`;
+      }
+    });
+    html += '</div>';
+    document.getElementById('decResult').innerHTML = html;
+    loadDecisions();
+  } catch(e) {
+    document.getElementById('decResult').innerHTML = `<p class="error">${e.message}</p>`;
+  }
+}
+
+async function loadDecisions() {
+  const filter = document.getElementById('decFilter')?.value || '';
+  const url = filter ? `/corporation/agents/decisions?agent_role=${filter}` : '/corporation/agents/decisions';
+  try {
+    const decs = await api(url);
+    document.getElementById('decLog').innerHTML = decs.slice(0,10).map(d =>
+      `<div class="dec-item">
+        <div class="dec-header">
+          <span class="dec-title">${d.title?.slice(0,50) || '—'}</span>
+          <span class="badge badge-purple">${d.agent_role}</span>
+        </div>
+        <div class="dec-body">${d.recommendation?.slice(0,100) || ''}…</div>
+        <div style="font-size:.72rem;color:#475569;margin-top:.2rem">${new Date(d.created_at).toLocaleString()} · confidence: ${(d.confidence*100).toFixed(0)}%</div>
+      </div>`).join('') || '<p class="loading">No decisions yet.</p>';
+  } catch(e) {}
+}
+
+// ── Risks ─────────────────────────────────────────────────────────────────────
+
+async function runRiskAssessment() {
+  const cat = document.getElementById('riskCat').value;
+  document.getElementById('riskList').innerHTML = '<p class="thinking">Assessing risks…</p>';
+  try {
+    const url = cat === 'all' ? '/corporation/risks' : `/corporation/risks/${cat}`;
+    const r = await api(url);
+    const risks = cat === 'all' ? [
+      ...(r.by_type?.financial || []),
+      ...(r.by_type?.operational || []),
+      ...(r.by_type?.security || []),
+      ...(r.by_type?.compliance || []),
+    ] : r;
+
+    const kpis = document.querySelectorAll('#riskKPIs .kpi-mini');
+    if (cat === 'all' && kpis[0]) {
+      const rl = r.overall_risk_level || 'low';
+      kpis[0].querySelector('.val').innerHTML = `<span class="badge badge-${rl}">${rl.toUpperCase()}</span>`;
+      kpis[1].querySelector('.val').textContent = r.critical_count ?? 0;
+      kpis[2].querySelector('.val').textContent = r.total_risks ?? 0;
+    }
+
+    document.getElementById('riskList').innerHTML = risks.map(risk =>
+      `<div class="risk-item">
+        <div class="risk-title">
+          <span class="badge badge-${risk.risk_score>=6?'critical':risk.risk_score>=3?'medium':'low'}">score ${risk.risk_score}</span>
+          ${risk.title}
+        </div>
+        <div class="risk-desc">${risk.description}</div>
+        <div class="risk-mit">→ ${risk.mitigation}</div>
+      </div>`).join('') || '<p class="success">✓ No risks found.</p>';
+    loadRiskRegister();
+  } catch(e) {
+    document.getElementById('riskList').innerHTML = `<p class="error">${e.message}</p>`;
+  }
+}
+
+async function loadRiskRegister() {
+  try {
+    const risks = await api('/corporation/risks/register');
+    document.getElementById('riskRegister').innerHTML = risks.slice(0,8).map(r =>
+      `<div class="risk-item">
+        <div class="risk-title"><span class="badge badge-${r.risk_score>=6?'critical':r.risk_score>=3?'medium':'low'}">${r.risk_type}</span> ${r.title}</div>
+        <div style="font-size:.74rem;color:#64748b">L:${r.likelihood} × I:${r.impact} = ${r.risk_score}</div>
+      </div>`).join('') || '<p class="loading">No risks in register yet.</p>';
+  } catch(e) {}
+}
+
+// ── Investments ───────────────────────────────────────────────────────────────
+
+async function calcROI() {
+  const body = {
+    name: document.getElementById('roiName').value || 'Investment',
+    investment_type: document.getElementById('roiType').value,
+    amount: parseFloat(document.getElementById('roiAmount').value) || 0,
+    expected_annual_return: parseFloat(document.getElementById('roiReturn').value) || 0,
+    duration_years: parseFloat(document.getElementById('roiYears').value) || 1,
+    risk_level: document.getElementById('roiRisk').value,
+  };
+  try {
+    const r = await api('/corporation/investments/roi', 'POST', body);
+    document.getElementById('roiResult').innerHTML = `
+      <div class="result-box">
+        <div class="result-row"><span>ROI</span><span class="result-val" style="font-size:1.1rem">${r.roi_pct}%</span></div>
+        <div class="result-row"><span>Payback Period</span><span class="result-val">${r.payback_months} months</span></div>
+        <div class="result-row"><span>NPV</span><span class="result-val">${fmt(r.npv)}</span></div>
+        <div class="result-row"><span>IRR (approx)</span><span class="result-val">${r.irr_approx_pct?.toFixed(1)}%</span></div>
+        <div class="result-row"><span>Rating</span><span class="result-val">${r.rating}</span></div>
+        <div style="font-size:.8rem;color:${r.roi_pct>30?'#22c55e':'#f59e0b'};margin-top:.4rem">${r.recommendation}</div>
+      </div>`;
+    loadPortfolio();
+  } catch(e) {
+    document.getElementById('roiResult').innerHTML = `<p class="error">${e.message}</p>`;
+  }
+}
+
+async function allocateBudget() {
+  const body = {
+    total_budget: parseFloat(document.getElementById('budgetAmount').value) || 0,
+    stage: document.getElementById('budgetStage').value,
+  };
+  try {
+    const r = await api('/corporation/investments/budget-allocation', 'POST', body);
+    document.getElementById('budgetResult').innerHTML = `
+      <div class="result-box">
+        <div style="font-size:.78rem;color:#64748b;margin-bottom:.5rem">${r.stage_description}</div>
+        ${Object.entries(r.allocation).map(([cat, v]) =>
+          `<div class="result-row"><span>${cat}</span><span class="result-val">${v.formatted} (${v.percentage}%)</span></div>`
+        ).join('')}
+      </div>`;
+  } catch(e) {
+    document.getElementById('budgetResult').innerHTML = `<p class="error">${e.message}</p>`;
+  }
+}
+
+async function capitalPlan() {
+  const body = {
+    growth_target_pct: parseFloat(document.getElementById('capGrowth').value) || 20,
+    months: parseInt(document.getElementById('capMonths').value) || 12,
+  };
+  try {
+    const r = await api('/corporation/investments/capital-plan', 'POST', body);
+    document.getElementById('capitalResult').innerHTML = `
+      <div class="result-box">
+        <div class="result-row"><span>Current Income</span><span class="result-val">${fmt(r.current_monthly_income)}/mo</span></div>
+        <div class="result-row"><span>Target Income</span><span class="result-val">${fmt(r.target_monthly_income)}/mo</span></div>
+        <div class="result-row"><span>Required Investment</span><span class="result-val">${fmt(r.required_investment)}</span></div>
+        <div class="result-row"><span>New Hires Needed</span><span class="result-val">${r.new_hires_needed}</span></div>
+        <div class="result-row"><span>Capital Runway</span><span class="result-val">${r.capital_runway_months} months</span></div>
+        <div style="margin-top:.5rem">${(r.funding_options||[]).map(f =>
+          `<div style="font-size:.78rem;color:#94a3b8;padding:.15rem 0">${f.option}: <span class="badge badge-${f.feasibility==='high'?'green':f.feasibility==='medium'?'blue':'medium'}">${f.feasibility}</span></div>`
+        ).join('')}</div>
+      </div>`;
+  } catch(e) {
+    document.getElementById('capitalResult').innerHTML = `<p class="error">${e.message}</p>`;
+  }
+}
+
+async function loadPortfolio() {
+  try {
+    const r = await api('/corporation/investments');
+    document.getElementById('investPortfolio').innerHTML = `
+      <div style="display:flex;gap:1rem;margin-bottom:.75rem">
+        <div class="kpi-mini" style="flex:1"><div class="val" style="font-size:1.1rem">${fmt(r.total_invested)}</div><div class="lbl">Total Invested</div></div>
+        <div class="kpi-mini" style="flex:1"><div class="val" style="font-size:1.1rem">${r.average_roi_pct}%</div><div class="lbl">Avg ROI</div></div>
+      </div>
+      ${(r.investments||[]).slice(0,5).map(i =>
+        `<div class="inv-row"><span>${i.name}</span><span class="inv-val">${i.roi_pct}% ROI · ${i.payback_months}mo</span></div>`
+      ).join('') || '<p class="loading">No investments tracked yet.</p>'}`;
+  } catch(e) {}
+}
+
+// ── Negotiations ──────────────────────────────────────────────────────────────
+
+async function supplierNeg() {
+  const body = {
+    supplier_name: document.getElementById('supName').value,
+    product: document.getElementById('supProduct').value,
+    current_price: parseFloat(document.getElementById('supPrice').value) || 0,
+    desired_discount_pct: parseFloat(document.getElementById('supDiscount').value) || 10,
+  };
+  if (!body.supplier_name) return;
+  try {
+    const r = await api('/corporation/negotiations/supplier', 'POST', body);
+    const pt = r.proposed_terms || {};
+    document.getElementById('supResult').innerHTML = `
+      <div class="result-box">
+        <div class="result-row"><span>Opening Offer</span><span class="result-val">${fmt(pt.opening_offer)}</span></div>
+        <div class="result-row"><span>Target Price</span><span class="result-val">${fmt(pt.target_price)}</span></div>
+        <div class="result-row"><span>Walk-Away Price</span><span class="result-val">${fmt(pt.walkaway_price)}</span></div>
+        <div class="result-row"><span>Payment Terms</span><span class="result-val">${pt.payment_terms}</span></div>
+        <div style="font-size:.78rem;color:#a78bfa;margin-top:.5rem">Strategy: ${r.strategy?.opening_position}</div>
+        <div style="font-size:.76rem;color:#64748b;margin-top:.25rem">BATNA: ${r.strategy?.batna}</div>
+      </div>`;
+    loadNegHistory();
+  } catch(e) {
+    document.getElementById('supResult').innerHTML = `<p class="error">${e.message}</p>`;
+  }
+}
+
+async function customerProposal() {
+  const body = {
+    customer_name: document.getElementById('custName').value,
+    deal_value: parseFloat(document.getElementById('custValue').value) || 0,
+  };
+  if (!body.customer_name) return;
+  try {
+    const r = await api('/corporation/negotiations/customer-proposal', 'POST', body);
+    document.getElementById('custResult').innerHTML = `
+      <div class="result-box">
+        <div style="font-size:.84rem;color:#e2e8f0;white-space:pre-wrap;margin-bottom:.5rem">${r.proposal}</div>
+        <div class="result-row"><span>Final Value</span><span class="result-val">${fmt(r.terms?.final_value)}</span></div>
+        <div class="result-row"><span>Discount</span><span class="result-val">${r.terms?.discount_pct}%</span></div>
+      </div>`;
+    loadNegHistory();
+  } catch(e) {
+    document.getElementById('custResult').innerHTML = `<p class="error">${e.message}</p>`;
+  }
+}
+
+async function contractRec() {
+  const type = document.getElementById('contractType').value;
+  try {
+    const r = await api('/corporation/negotiations/contract-recommendation', 'POST', { contract_type: type });
+    document.getElementById('contractResult').innerHTML = `
+      <div class="result-box">
+        <div style="font-weight:600;margin-bottom:.5rem;color:#a78bfa">${r.title}</div>
+        <div style="font-size:.74rem;color:#94a3b8;margin-bottom:.4rem">Key Clauses:</div>
+        <ul class="clause-list">${r.key_clauses.map(c=>`<li>${c}</li>`).join('')}</ul>
+        <div style="font-size:.74rem;color:#f87171;margin-top:.5rem;margin-bottom:.25rem">Red Flags to Avoid:</div>
+        ${r.red_flags.map(f=>`<div class="red-flag">⚠ ${f}</div>`).join('')}
+        <div style="font-size:.74rem;color:#f59e0b;margin-top:.5rem">⚠ ${r.disclaimer}</div>
+      </div>`;
+  } catch(e) {
+    document.getElementById('contractResult').innerHTML = `<p class="error">${e.message}</p>`;
+  }
+}
+
+async function loadNegHistory() {
+  try {
+    const negs = await api('/corporation/negotiations');
+    document.getElementById('negHistory').innerHTML = negs.slice(0,8).map(n =>
+      `<div class="neg-item">
+        <div style="font-weight:600;font-size:.875rem">${n.counterparty || '—'} <span class="badge badge-blue">${n.negotiation_type}</span></div>
+        <div style="font-size:.78rem;color:#94a3b8">${n.subject || '—'}</div>
+        <div style="font-size:.72rem;color:#475569;margin-top:.15rem">${new Date(n.created_at).toLocaleDateString()}</div>
+      </div>`).join('') || '<p class="loading">No negotiations yet.</p>';
+  } catch(e) {}
+}
+
+// ── Audit ─────────────────────────────────────────────────────────────────────
+
+async function loadAudit() {
+  try {
+    const logs = await api('/corporation/audit');
+    document.getElementById('auditLog').innerHTML = logs.length
+      ? `<table style="width:100%;border-collapse:collapse;font-size:.81rem">
+          <thead><tr style="color:#a78bfa;border-bottom:1px solid #1e2a4a">
+            <th style="text-align:left;padding:.4rem">Time</th>
+            <th style="text-align:left;padding:.4rem">Agent</th>
+            <th style="text-align:left;padding:.4rem">Action</th>
+            <th style="text-align:left;padding:.4rem">Details</th>
+          </tr></thead>
+          <tbody>${logs.map(l => `<tr style="border-bottom:1px solid #1e2a4a">
+            <td style="padding:.4rem;color:#64748b">${new Date(l.created_at).toLocaleString()}</td>
+            <td style="padding:.4rem"><span class="badge badge-purple">${l.agent_role}</span></td>
+            <td style="padding:.4rem">${l.action}</td>
+            <td style="padding:.4rem;color:#94a3b8">${l.details || '—'}</td>
+          </tr>`).join('')}</tbody>
+        </table>`
+      : '<p class="loading">No audit entries yet.</p>';
+  } catch(e) {}
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+if (!TOKEN) {
+  document.querySelectorAll('.loading').forEach(el => { el.textContent = 'Not logged in.'; });
+} else {
+  loadExec();
+  loadAgentCards();
+  loadDecisions();
+  runRiskAssessment();
+  loadPortfolio();
+  loadNegHistory();
+  loadAudit();
+}
+</script>
+</body>
+</html>

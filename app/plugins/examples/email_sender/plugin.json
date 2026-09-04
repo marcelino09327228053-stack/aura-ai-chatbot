@@ -1,0 +1,7 @@
+{
+    "name": "Email Sender",
+    "version": "1.0.0",
+    "author": "Aura",
+    "description": "Send email notifications using company profile and conversation context.",
+    "permissions": ["read_company_profile", "read_conversations"]
+}
