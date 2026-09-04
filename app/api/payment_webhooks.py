@@ -7,4 +7,8 @@ router = APIRouter(prefix="/webhooks/subscription", tags=["subscription-webhooks
 @router.post("/payment")
 async def subscription_payment(request: Request,
                                x_payment_signature: str | None = Header(default=None)):
-    return process_event(await request.body(), x_payment_signature)
+    raw = await request.body()
+    if len(raw) > 64 * 1024:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=413, detail="Payment event is too large.")
+    return process_event(raw, x_payment_signature)

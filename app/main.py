@@ -13,6 +13,8 @@ import os
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.trustedhost import TrustedHostMiddleware
+from fastapi.middleware.httpsredirect import HTTPSRedirectMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -46,13 +48,14 @@ from app.api.payment_webhooks import router as payment_webhooks_router
 from app.api.widget import router as widget_router
 from app.api.knowledge import router as knowledge_router
 from app.api.facebook_messenger import router as facebook_messenger_router
-from app.core.config import get_cors_origins
+from app.core.config import get_aura_env, get_cors_origins, validate_production_config
 from app.core.middleware import SecurityHeadersMiddleware
 from app.database.connection import init_db
 from app.modules import register_modules
 
 
 def create_app() -> FastAPI:
+    validate_production_config()
     application = FastAPI()
 
     os.makedirs("static", exist_ok=True)
@@ -66,6 +69,10 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
     application.add_middleware(SecurityHeadersMiddleware)
+    allowed_hosts = [item.strip() for item in os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1,testserver").split(",") if item.strip()]
+    application.add_middleware(TrustedHostMiddleware, allowed_hosts=allowed_hosts)
+    if get_aura_env() == "production" and os.getenv("FORCE_HTTPS", "true").lower() in ("1", "true", "yes"):
+        application.add_middleware(HTTPSRedirectMiddleware)
     application.add_middleware(MonitoringMiddleware)
 
     @application.get("/health", tags=["system"])

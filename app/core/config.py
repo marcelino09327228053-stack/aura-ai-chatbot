@@ -113,6 +113,43 @@ def get_aura_env() -> str:
     return os.getenv("AURA_ENV", "development").lower()
 
 
+def validate_production_config() -> None:
+    """Fail closed when required production security settings are unsafe."""
+    if get_aura_env() != "production":
+        return
+    errors = []
+    secret = os.getenv("SECRET_KEY", "")
+    if len(secret) < 32 or "change" in secret.lower() or "dev-secret" in secret.lower():
+        errors.append("SECRET_KEY must be a strong random value of at least 32 characters")
+    for name in ("PAYMENT_WEBHOOK_SECRET", "AI_METRICS_BEARER_TOKEN"):
+        value = os.getenv(name, "")
+        if len(value) < 32 or "replace" in value.lower():
+            errors.append(f"{name} must be a strong random value of at least 32 characters")
+    if os.getenv("DB_BACKEND", "").lower() != "postgres" or not os.getenv("DATABASE_URL", ""):
+        errors.append("production requires DB_BACKEND=postgres and DATABASE_URL")
+    if os.getenv("REDIS_ENABLED", "").lower() not in ("1", "true", "yes") or not os.getenv("REDIS_URL", ""):
+        errors.append("production requires REDIS_ENABLED=true and REDIS_URL")
+    if not os.getenv("ALLOWED_HOSTS", "").strip():
+        errors.append("ALLOWED_HOSTS must contain the production hostname")
+    origins = get_cors_origins()
+    if not origins or any(not origin.startswith("https://") for origin in origins):
+        errors.append("CORS_ALLOWED_ORIGINS must contain only explicit HTTPS origins")
+    if not any(os.getenv(item["key_env"], "").strip() for item in PROVIDER_SECURITY_CONFIG.values()):
+        errors.append("at least one server-side AI provider key must be configured")
+    if errors:
+        raise RuntimeError("Unsafe production configuration: " + "; ".join(errors))
+
+
+PROVIDER_SECURITY_CONFIG = {
+    "gemini": {"key_env": "GEMINI_API_KEY"},
+    "openai": {"key_env": "OPENAI_API_KEY"},
+    "claude": {"key_env": "ANTHROPIC_API_KEY"},
+    "groq": {"key_env": "GROQ_API_KEY"},
+    "deepseek": {"key_env": "DEEPSEEK_API_KEY"},
+    "grok": {"key_env": "XAI_API_KEY"},
+}
+
+
 def get_cors_origins() -> list[str]:
     configured = [
         item.strip()

@@ -3,6 +3,7 @@
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
+from app.core.config import get_aura_env
 
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
@@ -19,4 +20,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
             "Content-Security-Policy",
             "frame-ancestors 'none'; object-src 'none'; base-uri 'self'",
         )
+        if get_aura_env() == "production":
+            response.headers.setdefault("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+            response.headers.setdefault("Cache-Control", "no-store")
         return response
