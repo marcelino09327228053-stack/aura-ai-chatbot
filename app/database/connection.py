@@ -196,6 +196,22 @@ def init_db() -> None:
     """)
 
     cursor.execute("""
+    CREATE TABLE IF NOT EXISTS payment_webhook_events (
+        event_id TEXT PRIMARY KEY,
+        provider TEXT NOT NULL,
+        company_id INTEGER NOT NULL,
+        plan TEXT NOT NULL,
+        amount_minor INTEGER NOT NULL,
+        currency TEXT NOT NULL,
+        payload_hash TEXT NOT NULL,
+        status TEXT NOT NULL,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        processed_at TEXT,
+        FOREIGN KEY (company_id) REFERENCES companies(id)
+    )
+    """)
+
+    cursor.execute("""
     CREATE TABLE IF NOT EXISTS password_reset_tokens (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id INTEGER NOT NULL,

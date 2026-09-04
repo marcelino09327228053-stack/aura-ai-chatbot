@@ -80,6 +80,7 @@ AI_GATEWAY_USD_TO_ALLOWANCE_RATE = float(
 MOCK_PAYMENTS_ENABLED = os.getenv("MOCK_PAYMENTS_ENABLED", "true").lower() in (
     "1", "true", "yes"
 )
+PAYMENT_WEBHOOK_MAX_AGE_SECONDS = max(60, int(os.getenv("PAYMENT_WEBHOOK_MAX_AGE_SECONDS", "600")))
 
 MODULE_NAMES = ("crm", "inventory", "accounting", "hr", "reports", "analytics")
 

@@ -42,6 +42,7 @@ from app.api.faq import router as faq_router
 from app.api.profile_manager import router as profile_manager_router
 from app.api.subscriptions import router as subscriptions_router
 from app.api.ai_operations import router as ai_operations_router
+from app.api.payment_webhooks import router as payment_webhooks_router
 from app.api.widget import router as widget_router
 from app.api.knowledge import router as knowledge_router
 from app.api.facebook_messenger import router as facebook_messenger_router
@@ -197,6 +198,7 @@ def create_app() -> FastAPI:
     application.include_router(companies_router)
     application.include_router(subscriptions_router)
     application.include_router(ai_operations_router)
+    application.include_router(payment_webhooks_router)
     application.include_router(chat_router)
     application.include_router(ai_providers_router)
     application.include_router(conversations_router)
