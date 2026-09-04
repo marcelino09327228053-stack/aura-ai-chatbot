@@ -138,8 +138,10 @@ def init_db() -> None:
     subscription_columns = {
         "billing_cycle_start": "TEXT",
         "billing_cycle_end": "TEXT",
-        "monthly_ai_allowance": "INTEGER NOT NULL DEFAULT 0",
-        "ai_usage_consumed": "INTEGER NOT NULL DEFAULT 0",
+        "plan_price_minor": "INTEGER NOT NULL DEFAULT 0",
+        "monthly_ai_allowance_minor": "INTEGER NOT NULL DEFAULT 0",
+        "ai_usage_consumed_minor": "INTEGER NOT NULL DEFAULT 0",
+        "allowance_currency": "TEXT NOT NULL DEFAULT 'PHP'",
         "allowance_reset_at": "TEXT",
     }
     for column_name, column_type in subscription_columns.items():
@@ -159,7 +161,7 @@ def init_db() -> None:
         input_tokens INTEGER NOT NULL DEFAULT 0,
         output_tokens INTEGER NOT NULL DEFAULT 0,
         provider_cost_usd REAL,
-        allowance_deducted INTEGER NOT NULL DEFAULT 0,
+        allowance_deducted_minor INTEGER NOT NULL DEFAULT 0,
         status TEXT NOT NULL DEFAULT 'pending',
         error_code TEXT NOT NULL DEFAULT '',
         attempt_count INTEGER NOT NULL DEFAULT 0,
@@ -170,9 +172,27 @@ def init_db() -> None:
         FOREIGN KEY (user_id) REFERENCES users(id)
     )
     """)
+    if not _column_exists(cursor, "ai_gateway_requests", "allowance_deducted_minor"):
+        cursor.execute(
+            "ALTER TABLE ai_gateway_requests ADD COLUMN allowance_deducted_minor INTEGER NOT NULL DEFAULT 0"
+        )
     cursor.execute("""
     CREATE INDEX IF NOT EXISTS idx_ai_gateway_requests_company_created
     ON ai_gateway_requests (company_id, created_at)
+    """)
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS mock_payment_events (
+        event_id TEXT PRIMARY KEY,
+        company_id INTEGER NOT NULL,
+        plan TEXT NOT NULL,
+        amount_minor INTEGER NOT NULL,
+        currency TEXT NOT NULL,
+        status TEXT NOT NULL DEFAULT 'processing',
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        processed_at TEXT,
+        FOREIGN KEY (company_id) REFERENCES companies(id)
+    )
     """)
 
     cursor.execute("""
@@ -262,9 +282,9 @@ def init_db() -> None:
     """)
     if not _column_exists(cursor, "ai_provider_usage", "request_id"):
         cursor.execute("ALTER TABLE ai_provider_usage ADD COLUMN request_id TEXT")
-    if not _column_exists(cursor, "ai_provider_usage", "allowance_deducted"):
+    if not _column_exists(cursor, "ai_provider_usage", "allowance_deducted_minor"):
         cursor.execute(
-            "ALTER TABLE ai_provider_usage ADD COLUMN allowance_deducted INTEGER NOT NULL DEFAULT 0"
+            "ALTER TABLE ai_provider_usage ADD COLUMN allowance_deducted_minor INTEGER NOT NULL DEFAULT 0"
         )
     cursor.execute("""
     CREATE UNIQUE INDEX IF NOT EXISTS idx_ai_provider_usage_request

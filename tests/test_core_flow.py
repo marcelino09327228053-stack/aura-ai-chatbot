@@ -48,7 +48,7 @@ class CoreFlowTests(unittest.TestCase):
         cls.token = response.json()["token"]
         cls.headers = {"Authorization": f"Bearer {cls.token}"}
         from app.services.subscription_service import activate_paid_cycle
-        activate_paid_cycle(response.json()["company"]["id"], "pro")
+        activate_paid_cycle(response.json()["company"]["id"], "test")
 
     @classmethod
     def tearDownClass(cls):
@@ -102,7 +102,7 @@ class CoreFlowTests(unittest.TestCase):
         first_company = registration.json()["company"]
 
         from app.services.subscription_service import activate_paid_cycle
-        activate_paid_cycle(first_company["id"], "pro")
+        activate_paid_cycle(first_company["id"], "test")
 
         created = self.client.post(
             "/companies",
@@ -596,11 +596,19 @@ class CoreFlowTests(unittest.TestCase):
         )
 
     def test_gateway_ignores_customer_provider_selection(self):
+        from app.services import ai_gateway, ai_service
+
         os.environ["OPENAI_API_KEY"] = "test-openai-key"
+        ai_gateway.AI_MODEL_COSTS_USD["test-core-model"] = {
+            "input_per_million": 1.0,
+            "output_per_million": 1.0,
+        }
         try:
-            with patch(
+            with patch("app.services.ai_service.get_server_model", return_value="test-core-model"), patch(
                 "app.services.ai_service.generate_reply",
-                side_effect=lambda prompt, provider, *args: f"Answer from {provider}",
+                side_effect=lambda prompt, provider, *args: ai_service.AIResult(
+                    f"Answer from {provider}", 20, 10
+                ),
             ) as generated:
                 response = self.client.post(
                     "/chat",
@@ -618,6 +626,7 @@ class CoreFlowTests(unittest.TestCase):
             self.assertIn("Answer from openai", data["reply"])
         finally:
             os.environ["OPENAI_API_KEY"] = ""
+            ai_gateway.AI_MODEL_COSTS_USD.pop("test-core-model", None)
 
     def test_company_profile_html_is_cleaned_and_grounds_ai_prompt(self):
         from app.services.chat_service import _build_prompt
@@ -635,7 +644,7 @@ class CoreFlowTests(unittest.TestCase):
     def test_z_paid_subscription_expiration_and_renewal(self):
         company_id = self.client.get("/auth/me", headers=self.headers).json()["company"]["id"]
         from app.services.subscription_service import activate_paid_cycle
-        activated = activate_paid_cycle(company_id, "pro")
+        activated = activate_paid_cycle(company_id, "test")
         self.assertIsNotNone(activated["expires_at"])
 
         from app.database.connection import get_connection
@@ -663,7 +672,7 @@ class CoreFlowTests(unittest.TestCase):
         )
         self.assertIn("expired", blocked.json()["reply"].lower())
 
-        renewed = activate_paid_cycle(company_id, "pro")
+        renewed = activate_paid_cycle(company_id, "test")
         self.assertEqual(renewed["status"], "active")
 
     def test_zz_verified_account_email_change(self):

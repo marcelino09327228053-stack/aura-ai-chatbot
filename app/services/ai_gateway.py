@@ -8,18 +8,13 @@ import uuid
 from fastapi import HTTPException
 
 from app.core.config import (
-    AI_GATEWAY_DEFAULT_REQUEST_CREDITS,
     AI_GATEWAY_MAX_RETRIES,
     AI_GATEWAY_PROVIDER_ORDER,
-    AI_GATEWAY_TOKENS_PER_CREDIT,
+    AI_GATEWAY_USD_TO_ALLOWANCE_RATE,
     AI_MODEL_COSTS_USD,
 )
 from app.database import ai_gateway_repository, ai_usage_repository, subscription_repository
 from app.services import ai_service, subscription_service
-
-
-def _estimated_tokens(text: str) -> int:
-    return max(1, math.ceil(len(text or "") / 4))
 
 
 def _provider_cost(model: str, input_tokens: int, output_tokens: int) -> float | None:
@@ -38,9 +33,9 @@ def _provider_cost(model: str, input_tokens: int, output_tokens: int) -> float |
     )
 
 
-def _allowance_charge(input_tokens: int, output_tokens: int) -> int:
-    token_charge = math.ceil((input_tokens + output_tokens) / AI_GATEWAY_TOKENS_PER_CREDIT)
-    return max(AI_GATEWAY_DEFAULT_REQUEST_CREDITS, token_charge)
+def _allowance_charge_minor(provider_cost_usd: float) -> int:
+    """Convert actual provider cost to allowance-currency minor units."""
+    return max(0, math.ceil(provider_cost_usd * AI_GATEWAY_USD_TO_ALLOWANCE_RATE * 100))
 
 
 def _configured_provider_order() -> list[str]:
@@ -95,11 +90,27 @@ async def generate(
                     ai_service.generate_reply, prompt, provider, model, None
                 )
                 reply = str(answer)
-                input_tokens = int(getattr(answer, "input_tokens", 0) or _estimated_tokens(prompt))
-                output_tokens = int(getattr(answer, "output_tokens", 0) or _estimated_tokens(reply))
+                input_tokens = int(getattr(answer, "input_tokens", 0) or 0)
+                output_tokens = int(getattr(answer, "output_tokens", 0) or 0)
+                if input_tokens + output_tokens <= 0:
+                    ai_gateway_repository.fail_request(
+                        request_id, "provider_usage_unavailable", attempts, provider, model
+                    )
+                    raise HTTPException(
+                        status_code=503,
+                        detail="The provider did not return billable token usage.",
+                    )
                 cost = _provider_cost(model, input_tokens, output_tokens)
-                charge = _allowance_charge(input_tokens, output_tokens)
-                if charge > subscription["remaining_allowance"] or not subscription_repository.deduct_allowance(company_id, charge):
+                if cost is None:
+                    ai_gateway_repository.fail_request(
+                        request_id, "provider_cost_unconfigured", attempts, provider, model
+                    )
+                    raise HTTPException(
+                        status_code=503,
+                        detail="AI cost configuration is missing for the selected model.",
+                    )
+                charge_minor = _allowance_charge_minor(cost)
+                if charge_minor > subscription["remaining_allowance_minor"] or not subscription_repository.deduct_allowance(company_id, charge_minor):
                     ai_gateway_repository.fail_request(
                         request_id, "allowance_exhausted", attempts, provider, model
                     )
@@ -113,7 +124,7 @@ async def generate(
                     estimated_cost=cost,
                     status="success",
                     request_id=request_id,
-                    allowance_deducted=charge,
+                    allowance_deducted_minor=charge_minor,
                 )
                 completed = ai_gateway_repository.complete_request(
                     request_id,
@@ -123,7 +134,7 @@ async def generate(
                     input_tokens,
                     output_tokens,
                     cost,
-                    charge,
+                    charge_minor,
                     attempts,
                 )
                 return {**completed, "reply": reply, "idempotent_replay": False}

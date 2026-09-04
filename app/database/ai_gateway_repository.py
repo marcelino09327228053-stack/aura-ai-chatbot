@@ -44,7 +44,7 @@ def complete_request(
     input_tokens: int,
     output_tokens: int,
     provider_cost_usd: float | None,
-    allowance_deducted: int,
+    allowance_deducted_minor: int,
     attempt_count: int,
 ) -> dict:
     conn = get_connection()
@@ -52,7 +52,7 @@ def complete_request(
         """
         UPDATE ai_gateway_requests
         SET provider = ?, model = ?, response_text = ?, input_tokens = ?,
-            output_tokens = ?, provider_cost_usd = ?, allowance_deducted = ?,
+            output_tokens = ?, provider_cost_usd = ?, allowance_deducted_minor = ?,
             attempt_count = ?, status = 'success', completed_at = datetime('now')
         WHERE request_id = ? AND status = 'pending'
         """,
@@ -63,7 +63,7 @@ def complete_request(
             input_tokens,
             output_tokens,
             provider_cost_usd,
-            allowance_deducted,
+            allowance_deducted_minor,
             attempt_count,
             request_id,
         ),
@@ -98,7 +98,7 @@ def list_recent(company_id: int, limit: int = 50) -> list[dict]:
     cursor.execute(
         """
         SELECT request_id, provider, model, input_tokens, output_tokens,
-               provider_cost_usd, allowance_deducted, status, error_code,
+               provider_cost_usd, allowance_deducted_minor, status, error_code,
                attempt_count, created_at, completed_at
         FROM ai_gateway_requests
         WHERE company_id = ?

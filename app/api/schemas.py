@@ -103,6 +103,12 @@ class SubscriptionUpdateRequest(BaseModel):
     plan: str
 
 
+class MockPaymentEventRequest(BaseModel):
+    event_id: str
+    plan: str = "test"
+    status: str = "succeeded"
+
+
 class AIProviderConnectRequest(BaseModel):
     api_key: str
 

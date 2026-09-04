@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from app.api.schemas import SubscriptionUpdateRequest
+from app.api.schemas import MockPaymentEventRequest, SubscriptionUpdateRequest
 from app.core.deps import require_auth
 from app.database import (
     ai_gateway_repository,
@@ -15,6 +15,7 @@ from app.services.subscription_service import (
     get_plan_limits,
     get_subscription_status,
 )
+from app.services.mock_payment_service import process_successful_payment
 
 router = APIRouter(prefix="/subscription", tags=["subscription"])
 
@@ -49,3 +50,10 @@ def upgrade_plan(body: SubscriptionUpdateRequest, ctx=Depends(require_auth)):
         status_code=501,
         detail="Plan activation is not available until a verified payment webhook is configured.",
     )
+
+
+@router.post("/mock-payment/succeeded")
+def mock_payment_succeeded(body: MockPaymentEventRequest, ctx=Depends(require_auth)):
+    if body.status.lower() != "succeeded":
+        raise HTTPException(status_code=400, detail="Only successful mock events are supported.")
+    return process_successful_payment(body.event_id, ctx.company_id, body.plan)

@@ -110,7 +110,8 @@ function authHeaders() {
   if(!token){ location.href="/login"; return null; }
   return {"Content-Type":"application/json","Authorization":"Bearer "+token};
 }
-function money(value){ return new Intl.NumberFormat("en-PH",{style:"currency",currency:"USD"}).format(Number(value||0)); }
+function moneyMinor(value){ return new Intl.NumberFormat("en-PH",{style:"currency",currency:"PHP"}).format(Number(value||0)/100); }
+function moneyUsd(value){ return new Intl.NumberFormat("en-US",{style:"currency",currency:"USD",maximumFractionDigits:6}).format(Number(value||0)); }
 function dateText(value){ return value ? new Date(value).toLocaleString() : "No expiration"; }
 
 async function loadSubscription(){
@@ -126,8 +127,8 @@ async function loadSubscription(){
     ? `${sub.days_remaining} day(s) remaining • Expires ${dateText(sub.expires_at)}`
     : "Free plan • No expiration";
   document.getElementById("renewButton").style.display=sub.plan==="free"?"none":"inline-block";
-  document.getElementById("messageUsage").textContent=`${sub.ai_usage_consumed||0} / ${sub.monthly_ai_allowance||0} credits`;
-  document.getElementById("remainingAllowance").textContent=`${sub.remaining_allowance||0} credits remaining in this billing cycle.`;
+  document.getElementById("messageUsage").textContent=`${moneyMinor(sub.ai_usage_consumed_minor||0)} / ${moneyMinor(sub.monthly_ai_allowance_minor||0)} AI usage`;
+  document.getElementById("remainingAllowance").textContent=`${moneyMinor(sub.remaining_allowance_minor||0)} remaining in this billing cycle.`;
   if(data.notification){
     const notice=document.getElementById("expiryNotice");
     notice.style.display="block";
@@ -137,19 +138,19 @@ async function loadSubscription(){
   document.getElementById("planList").innerHTML=plans.map(plan=>{
     const active=plan.plan===sub.plan?"active":"";
     const companies=plan.max_companies===null?"Unlimited":plan.max_companies;
-    const allowance=plan.monthly_ai_allowance||0;
-    const price="Pricing to be configured";
+    const allowance=plan.monthly_ai_allowance_minor||0;
+    const price=moneyMinor(plan.price_minor||0)+" / month";
     return `<div class="card ${active}"><h3>${plan.plan.toUpperCase()}</h3><div class="metric">${price}</div>
-      <ul><li>${companies} companies</li><li>${allowance} monthly AI credits</li><li>Server-managed AI access</li></ul>
-      ${active?`<button disabled>Current plan</button>`:`<button disabled>Payment integration coming soon</button>`}</div>`;
+      <ul><li>${companies} companies</li><li>${moneyMinor(allowance)} monthly AI usage allowance</li><li>Server-managed AI access</li></ul>
+      ${active?`<button disabled>Current plan</button>`:(plan.plan==="test"?`<button onclick="mockActivate('${plan.plan}')">TEST: Simulate successful payment</button>`:`<button disabled>Unavailable</button>`)}</div>`;
   }).join("");
   const payments=data.payment_history||[];
   document.getElementById("paymentRows").innerHTML=payments.length?payments.map(p=>
-    `<tr><td>${dateText(p.created_at)}</td><td>AI Chatbot subscription</td><td>${money(p.amount)}</td><td>${p.method}</td><td>${p.status}</td></tr>`
+    `<tr><td>${dateText(p.created_at)}</td><td>AI Chatbot subscription</td><td>${moneyMinor(p.amount)}</td><td>${p.method}</td><td>${p.status}</td></tr>`
   ).join(""):`<tr><td colspan="5" class="muted">No AI Chatbot payments recorded yet.</td></tr>`;
   const providerUsage=data.ai_usage?.providers||[];
   document.getElementById("aiUsageRows").innerHTML=providerUsage.length?providerUsage.map(item=>
-    `<tr><td>${item.provider}</td><td>${item.requests}</td><td>${item.input_tokens}</td><td>${item.output_tokens}</td><td>${item.estimated_cost===null?"Check provider":money(item.estimated_cost)}</td></tr>`
+    `<tr><td>${item.provider}</td><td>${item.requests}</td><td>${item.input_tokens}</td><td>${item.output_tokens}</td><td>${item.estimated_cost===null?"Check provider":moneyUsd(item.estimated_cost)}</td></tr>`
   ).join(""):`<tr><td colspan="5" class="muted">No AI provider usage recorded yet.</td></tr>`;
 }
 async function upgrade(plan){
@@ -158,7 +159,15 @@ async function upgrade(plan){
   if(!res.ok){showToast(data.detail||"Subscription update failed.");return}
   await loadSubscription();
 }
-function renewCurrent(){ if(currentSubscription?.plan) upgrade(currentSubscription.plan); }
+async function mockActivate(plan){
+  const eventId="mock_"+(crypto.randomUUID?.()||Date.now());
+  const res=await fetch("/subscription/mock-payment/succeeded",{method:"POST",headers:authHeaders(),body:JSON.stringify({event_id:eventId,plan,status:"succeeded"})});
+  const data=await res.json();
+  if(!res.ok){showToast(data.detail||"Mock activation failed.");return}
+  showToast("Test payment succeeded. AI access is active.");
+  await loadSubscription();
+}
+function renewCurrent(){ if(currentSubscription?.plan) mockActivate(currentSubscription.plan); }
 loadSubscription();
 </script>
 </body>

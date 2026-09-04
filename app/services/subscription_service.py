@@ -32,7 +32,7 @@ def get_subscription_status(company_id: int) -> dict:
 
     plan_config = AI_PLAN_CONFIG.get(sub["plan"], {})
     sub = subscription_repository.reset_allowance_if_due(
-        company_id, int(plan_config.get("monthly_ai_allowance", 0))
+        company_id, int(plan_config.get("monthly_ai_allowance_minor", 0))
     ) or sub
     days_remaining = None
     notification = None
@@ -80,8 +80,8 @@ def prepare_gateway_access(company_id: int) -> dict:
         raise HTTPException(status_code=403, detail="AI access is suspended.")
     if status["status"] not in ("active",):
         raise HTTPException(status_code=402, detail="An active subscription is required.")
-    if int(status.get("remaining_allowance", 0)) <= 0:
-        if status.get("monthly_ai_allowance", 0):
+    if int(status.get("remaining_allowance_minor", 0)) <= 0:
+        if status.get("monthly_ai_allowance_minor", 0):
             # Normalize an old active row whose allowance was just consumed.
             conn_status = subscription_repository.get_subscription_by_company(company_id)
             status = conn_status or status
@@ -102,7 +102,9 @@ def activate_paid_cycle(
     subscription = subscription_repository.activate_subscription(
         company_id,
         plan,
-        int(config.get("monthly_ai_allowance", 0)),
+        int(config.get("price_minor", 0)),
+        int(config.get("monthly_ai_allowance_minor", 0)),
+        str(config.get("currency", "PHP")),
         cycle_start,
         cycle_end,
     )
@@ -144,10 +146,12 @@ def get_plan_catalog() -> list[dict]:
     return [
         {
             "plan": plan,
-            "monthly_ai_allowance": int(config.get("monthly_ai_allowance", 0)),
+            "price_minor": int(config.get("price_minor", 0)),
+            "monthly_ai_allowance_minor": int(
+                config.get("monthly_ai_allowance_minor", 0)
+            ),
+            "currency": str(config.get("currency", "PHP")),
             "max_companies": config.get("max_companies"),
-            "price": None,
-            "currency": None,
         }
         for plan, config in AI_PLAN_CONFIG.items()
     ]

@@ -5,13 +5,13 @@ from datetime import datetime, timedelta, timezone
 from app.database.connection import get_connection
 
 
-def create_subscription(company_id: int, plan: str = "free") -> dict:
+def create_subscription(company_id: int, plan: str = "test") -> dict:
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute(
         """
         INSERT INTO subscriptions (company_id, plan, status)
-        VALUES (?, ?, 'active')
+        VALUES (?, ?, 'inactive')
         """,
         (company_id, plan),
     )
@@ -24,8 +24,9 @@ def get_subscription_by_company(company_id: int) -> dict | None:
     cursor.execute(
         """
         SELECT id, company_id, plan, status, expires_at, created_at,
-               billing_cycle_start, billing_cycle_end, monthly_ai_allowance,
-               ai_usage_consumed, allowance_reset_at
+               billing_cycle_start, billing_cycle_end, plan_price_minor,
+               monthly_ai_allowance_minor, ai_usage_consumed_minor,
+               allowance_currency, allowance_reset_at
         FROM subscriptions WHERE company_id = ?
         """,
         (company_id,),
@@ -42,11 +43,13 @@ def get_subscription_by_company(company_id: int) -> dict | None:
         "created_at": row["created_at"],
         "billing_cycle_start": row["billing_cycle_start"],
         "billing_cycle_end": row["billing_cycle_end"],
-        "monthly_ai_allowance": row["monthly_ai_allowance"],
-        "ai_usage_consumed": row["ai_usage_consumed"],
-        "remaining_allowance": max(
-            0, row["monthly_ai_allowance"] - row["ai_usage_consumed"]
+        "plan_price_minor": row["plan_price_minor"],
+        "monthly_ai_allowance_minor": row["monthly_ai_allowance_minor"],
+        "ai_usage_consumed_minor": row["ai_usage_consumed_minor"],
+        "remaining_allowance_minor": max(
+            0, row["monthly_ai_allowance_minor"] - row["ai_usage_consumed_minor"]
         ),
+        "allowance_currency": row["allowance_currency"],
         "allowance_reset_at": row["allowance_reset_at"],
     }
 
@@ -67,6 +70,8 @@ def get_user_plan(user_id: int) -> str:
         return "enterprise"
     if "pro" in plans:
         return "pro"
+    if "test" in plans:
+        return "test"
     return "free"
 
 
@@ -108,7 +113,9 @@ def update_subscription_plan(
 def activate_subscription(
     company_id: int,
     plan: str,
-    monthly_ai_allowance: int,
+    plan_price_minor: int,
+    monthly_ai_allowance_minor: int,
+    allowance_currency: str,
     cycle_start: datetime | None = None,
     cycle_end: datetime | None = None,
 ) -> dict | None:
@@ -122,8 +129,8 @@ def activate_subscription(
         UPDATE subscriptions
         SET plan = ?, status = 'active', expires_at = ?,
             billing_cycle_start = ?, billing_cycle_end = ?,
-            monthly_ai_allowance = ?, ai_usage_consumed = 0,
-            allowance_reset_at = ?
+            plan_price_minor = ?, monthly_ai_allowance_minor = ?,
+            ai_usage_consumed_minor = 0, allowance_currency = ?, allowance_reset_at = ?
         WHERE company_id = ?
         """,
         (
@@ -131,7 +138,9 @@ def activate_subscription(
             end.isoformat(),
             start.isoformat(),
             end.isoformat(),
-            max(0, int(monthly_ai_allowance)),
+            max(0, int(plan_price_minor)),
+            max(0, int(monthly_ai_allowance_minor)),
+            allowance_currency,
             end.isoformat(),
             company_id,
         ),
@@ -140,7 +149,9 @@ def activate_subscription(
     return get_subscription_by_company(company_id) if cursor.rowcount else None
 
 
-def reset_allowance_if_due(company_id: int, monthly_ai_allowance: int) -> dict | None:
+def reset_allowance_if_due(
+    company_id: int, monthly_ai_allowance_minor: int
+) -> dict | None:
     current = get_subscription_by_company(company_id)
     if not current or not current.get("billing_cycle_end"):
         return current
@@ -162,7 +173,8 @@ def reset_allowance_if_due(company_id: int, monthly_ai_allowance: int) -> dict |
         """
         UPDATE subscriptions
         SET status = 'active', billing_cycle_start = ?, billing_cycle_end = ?,
-            expires_at = ?, monthly_ai_allowance = ?, ai_usage_consumed = 0,
+            expires_at = ?, monthly_ai_allowance_minor = ?,
+            ai_usage_consumed_minor = 0,
             allowance_reset_at = ?
         WHERE company_id = ? AND status != 'suspended'
         """,
@@ -170,7 +182,7 @@ def reset_allowance_if_due(company_id: int, monthly_ai_allowance: int) -> dict |
             (next_end - timedelta(days=30)).isoformat(),
             next_end.isoformat(),
             next_end.isoformat(),
-            max(0, int(monthly_ai_allowance)),
+            max(0, int(monthly_ai_allowance_minor)),
             next_end.isoformat(),
             company_id,
         ),
@@ -179,23 +191,23 @@ def reset_allowance_if_due(company_id: int, monthly_ai_allowance: int) -> dict |
     return get_subscription_by_company(company_id)
 
 
-def deduct_allowance(company_id: int, amount: int) -> bool:
-    """Atomically deduct credits without allowing the balance below zero."""
-    amount = max(0, int(amount))
+def deduct_allowance(company_id: int, amount_minor: int) -> bool:
+    """Atomically deduct allowance minor units without allowing a negative balance."""
+    amount_minor = max(0, int(amount_minor))
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute(
         """
         UPDATE subscriptions
-        SET ai_usage_consumed = ai_usage_consumed + ?,
+        SET ai_usage_consumed_minor = ai_usage_consumed_minor + ?,
             status = CASE
-                WHEN ai_usage_consumed + ? >= monthly_ai_allowance THEN 'exhausted'
+                WHEN ai_usage_consumed_minor + ? >= monthly_ai_allowance_minor THEN 'exhausted'
                 ELSE status
             END
         WHERE company_id = ? AND status = 'active'
-          AND ai_usage_consumed + ? <= monthly_ai_allowance
+          AND ai_usage_consumed_minor + ? <= monthly_ai_allowance_minor
         """,
-        (amount, amount, company_id, amount),
+        (amount_minor, amount_minor, company_id, amount_minor),
     )
     conn.commit()
     return cursor.rowcount == 1

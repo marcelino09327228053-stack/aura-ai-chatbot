@@ -12,14 +12,14 @@ def record_usage(
     estimated_cost: float | None = None,
     status: str = "success",
     request_id: str | None = None,
-    allowance_deducted: int = 0,
+    allowance_deducted_minor: int = 0,
 ) -> None:
     conn = get_connection()
     conn.cursor().execute(
         """
         INSERT INTO ai_provider_usage
         (company_id, provider, model, input_tokens, output_tokens, estimated_cost,
-         status, request_id, allowance_deducted)
+         status, request_id, allowance_deducted_minor)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         (
@@ -31,7 +31,7 @@ def record_usage(
             estimated_cost,
             status,
             request_id,
-            allowance_deducted,
+            allowance_deducted_minor,
         ),
     )
     conn.commit()
@@ -71,7 +71,7 @@ def list_recent(company_id: int, limit: int = 50) -> list[dict]:
     cursor.execute(
         """
         SELECT request_id, provider, model, input_tokens, output_tokens,
-               estimated_cost, allowance_deducted, status, created_at
+               estimated_cost, allowance_deducted_minor, status, created_at
         FROM ai_provider_usage
         WHERE company_id = ?
         ORDER BY created_at DESC, id DESC

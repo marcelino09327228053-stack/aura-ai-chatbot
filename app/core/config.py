@@ -19,6 +19,7 @@ LEGACY_COMPANY_ID = int(os.getenv("LEGACY_COMPANY_ID", "1"))
 
 PLAN_LIMITS = {
     "free": {"max_companies": 1, "max_messages_per_day": 100},
+    "test": {"max_companies": 5, "max_messages_per_day": 5000},
     "pro": {"max_companies": 5, "max_messages_per_day": 5000},
     "enterprise": {"max_companies": None, "max_messages_per_day": None},
 }
@@ -40,9 +41,18 @@ def _json_env(name: str, default: dict) -> dict:
 AI_PLAN_CONFIG = _json_env(
     "AI_PLAN_CONFIG_JSON",
     {
-        "free": {"monthly_ai_allowance": 0, "max_companies": 1},
-        "pro": {"monthly_ai_allowance": 10_000, "max_companies": 5},
-        "enterprise": {"monthly_ai_allowance": 100_000, "max_companies": None},
+        "free": {
+            "price_minor": 0,
+            "monthly_ai_allowance_minor": 0,
+            "currency": "PHP",
+            "max_companies": 1,
+        },
+        "test": {
+            "price_minor": 150_000,
+            "monthly_ai_allowance_minor": 50_000,
+            "currency": "PHP",
+            "max_companies": 5,
+        },
     },
 )
 
@@ -52,11 +62,13 @@ AI_GATEWAY_PROVIDER_ORDER = tuple(
     if item.strip()
 )
 AI_GATEWAY_MAX_RETRIES = max(0, int(os.getenv("AI_GATEWAY_MAX_RETRIES", "1")))
-AI_GATEWAY_TOKENS_PER_CREDIT = max(1, int(os.getenv("AI_GATEWAY_TOKENS_PER_CREDIT", "1000")))
-AI_GATEWAY_DEFAULT_REQUEST_CREDITS = max(
-    1, int(os.getenv("AI_GATEWAY_DEFAULT_REQUEST_CREDITS", "1"))
-)
 AI_MODEL_COSTS_USD = _json_env("AI_MODEL_COSTS_USD_JSON", {})
+AI_GATEWAY_USD_TO_ALLOWANCE_RATE = float(
+    os.getenv("AI_GATEWAY_USD_TO_ALLOWANCE_RATE", "58.0")
+)
+MOCK_PAYMENTS_ENABLED = os.getenv("MOCK_PAYMENTS_ENABLED", "true").lower() in (
+    "1", "true", "yes"
+)
 
 MODULE_NAMES = ("crm", "inventory", "accounting", "hr", "reports", "analytics")
 
