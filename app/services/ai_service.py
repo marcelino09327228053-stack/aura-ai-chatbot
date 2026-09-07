@@ -116,7 +116,7 @@ def get_provider_status(company_id: int | None = None) -> list[dict]:
         {
             "id": provider_id,
             "name": config["name"],
-            "configured": bool(os.getenv(config["key_env"], "").strip()),
+            "configured": bool(get_server_api_key(provider_id)),
             "managed_by_gateway": True,
             "model": get_server_model(provider_id),
             "models": config["models"],
@@ -131,6 +131,17 @@ def get_server_model(provider: str) -> str:
     selected = os.getenv(config["model_env"], config["default_model"])
     allowed = {item["id"] for item in config["models"]}
     return selected if selected in allowed else config["default_model"]
+
+
+def get_server_api_key(provider: str) -> str:
+    """Prefer encrypted owner-managed credentials, with environment fallback."""
+    try:
+        from app.owner.repository import get_provider_key
+        saved = get_provider_key(provider)
+        if saved: return saved
+    except Exception:
+        pass
+    return os.getenv(PROVIDERS[provider]["key_env"], "").strip()
 
 
 def get_selected_model(company_id: int, provider: str) -> str:
@@ -311,7 +322,7 @@ def generate_reply(
         raise ValueError(f"Unknown AI provider: {provider}")
 
     config = PROVIDERS[provider]
-    api_key = (api_key or os.getenv(config["key_env"], "")).strip()
+    api_key = (api_key or get_server_api_key(provider)).strip()
     if not api_key:
         raise RuntimeError(f"{config['name']} API key is not configured.")
     selected_model = model or os.getenv(config["model_env"], config["default_model"])

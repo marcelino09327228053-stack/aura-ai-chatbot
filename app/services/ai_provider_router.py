@@ -76,7 +76,7 @@ def route_candidates(capability_tier: str = "balanced") -> list[RouteCandidate]:
     candidates = []
     for priority, provider in enumerate(AI_GATEWAY_PROVIDER_ORDER):
         config = ai_service.PROVIDERS.get(provider)
-        if not config or not os.getenv(config["key_env"], "").strip():
+        if not config or not ai_service.get_server_api_key(provider):
             continue
         if provider_health.status(provider)["state"] != "healthy":
             continue

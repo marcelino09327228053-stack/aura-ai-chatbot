@@ -100,6 +100,13 @@ def agents_enabled() -> bool:
 
 def is_agent_type_enabled(agent_type: str) -> bool:
     """Per-agent flags default to enabled when the platform is on."""
+    try:
+        from app.owner.repository import agent_enabled
+        configured = agent_enabled(agent_type)
+        if configured is not None:
+            return configured
+    except Exception:
+        pass
     key = f"AGENT_{agent_type.upper()}_ENABLED"
     return os.getenv(key, "true").lower() in ("1", "true", "yes")
 
@@ -125,6 +132,8 @@ def validate_production_config() -> None:
         value = os.getenv(name, "")
         if len(value) < 32 or "replace" in value.lower():
             errors.append(f"{name} must be a strong random value of at least 32 characters")
+    if len(os.getenv("CLOUD_ENCRYPTION_KEY", "")) < 40:
+        errors.append("CLOUD_ENCRYPTION_KEY must be a dedicated Fernet key")
     if os.getenv("DB_BACKEND", "").lower() != "postgres" or not os.getenv("DATABASE_URL", ""):
         errors.append("production requires DB_BACKEND=postgres and DATABASE_URL")
     if os.getenv("REDIS_ENABLED", "").lower() not in ("1", "true", "yes") or not os.getenv("REDIS_URL", ""):
@@ -134,8 +143,6 @@ def validate_production_config() -> None:
     origins = get_cors_origins()
     if not origins or any(not origin.startswith("https://") for origin in origins):
         errors.append("CORS_ALLOWED_ORIGINS must contain only explicit HTTPS origins")
-    if not any(os.getenv(item["key_env"], "").strip() for item in PROVIDER_SECURITY_CONFIG.values()):
-        errors.append("at least one server-side AI provider key must be configured")
     if errors:
         raise RuntimeError("Unsafe production configuration: " + "; ".join(errors))
 

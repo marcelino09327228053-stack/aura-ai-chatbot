@@ -8,6 +8,7 @@ class ProductionSecurityTests(unittest.TestCase):
     def secure_env(self):
         return {"AURA_ENV":"production","SECRET_KEY":"s"*40,
                 "PAYMENT_WEBHOOK_SECRET":"w"*40,"AI_METRICS_BEARER_TOKEN":"m"*40,
+                "CLOUD_ENCRYPTION_KEY":"e"*44,
                 "DB_BACKEND":"postgres","DATABASE_URL":"postgresql://database/app",
                 "REDIS_ENABLED":"true","REDIS_URL":"redis://redis:6379/0",
                 "ALLOWED_HOSTS":"chatbot.example.com",
