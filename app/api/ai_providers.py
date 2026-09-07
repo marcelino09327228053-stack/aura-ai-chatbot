@@ -10,15 +10,18 @@ router = APIRouter(prefix="/ai/providers", tags=["ai-providers"])
 
 
 def _validate_provider(provider: str) -> str:
-    provider = provider.lower()
-    if provider not in ai_service.PROVIDERS:
-        raise HTTPException(status_code=404, detail="Unknown AI provider.")
-    return provider
+    # Do not confirm or deny individual provider identities to customers.
+    return provider.lower()
 
 
 @router.get("")
 async def list_ai_providers(ctx=Depends(require_auth)):
-    return {"providers": ai_service.get_provider_status(ctx.company_id)}
+    del ctx
+    statuses = ai_service.get_provider_status()
+    return {
+        "managed_by_gateway": True,
+        "ai_available": any(item["configured"] for item in statuses),
+    }
 
 
 @router.post("/{provider}/connect")

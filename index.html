@@ -2687,7 +2687,7 @@ border:none;">
 </select>
 </div>
 
-<p style="margin-bottom:8px;" data-i18n="aiModels">AI Models</p>
+<p style="margin-bottom:8px;">AI Access</p>
 <p style="margin:0 0 10px;color:var(--muted);font-size:12px;">
   AI access is included with an active plan. Provider keys and model routing are securely managed by the AI Gateway.
 </p>
@@ -2696,7 +2696,7 @@ border:none;">
   <strong data-i18n="selectAllAvailable">Select all available</strong>
 </label>
 <div id="providerOptions" style="display:grid;gap:8px;margin-bottom:10px;">
-  <span style="color:var(--muted);font-size:13px;">Loading AI providers...</span>
+  <span style="color:var(--muted);font-size:13px;">Checking managed AI access...</span>
 </div>
 
 <hr style="margin:15px 0; border:0.5px solid #475569;">
@@ -4296,6 +4296,13 @@ async function loadAIProviders() {
       return;
     }
     const data = await response.json();
+    availableAIProviders = [];
+    container.innerHTML = `<div class="ai-provider-card"><strong>Managed AI Access</strong><small style="display:block;color:var(--muted);margin-top:5px;">${data.ai_available ? "Available with your active subscription" : "Temporarily unavailable"}</small></div>`;
+    document.getElementById("contextProviders").textContent = "Managed AI Access";
+    document.getElementById("providerOnlineStatus").textContent = data.ai_available ? "AI available" : "AI temporarily unavailable";
+    const statusDot = document.getElementById("providerStatusDot");
+    statusDot.style.background = data.ai_available ? "#4ade80" : "#f59e0b";
+    return;
     availableAIProviders = data.providers || [];
     let saved = [];
     const hasSavedSelection = localStorage.getItem("aiProviders") !== null;
@@ -4359,33 +4366,7 @@ async function updateAIProviderModel(provider, model) {
   }
 }
 
-const aiSetupProviders = {
-  gemini: {
-    name: "Gemini",
-    billingUrl: "https://aistudio.google.com/app/billing",
-    keyUrl: "https://aistudio.google.com/app/api-keys"
-  },
-  openai: {
-    name: "OpenAI",
-    billingUrl: "https://platform.openai.com/settings/organization/billing/overview",
-    keyUrl: "https://platform.openai.com/api-keys"
-  },
-  claude: {
-    name: "Claude",
-    billingUrl: "https://console.anthropic.com/settings/billing",
-    keyUrl: "https://console.anthropic.com/settings/keys"
-  },
-  deepseek: {
-    name: "DeepSeek",
-    billingUrl: "https://platform.deepseek.com/top_up",
-    keyUrl: "https://platform.deepseek.com/api_keys"
-  },
-  grok: {
-    name: "Grok",
-    billingUrl: "https://console.x.ai/team/default/billing",
-    keyUrl: "https://console.x.ai/team/default/api-keys"
-  }
-};
+const aiSetupProviders = {};
 
 const aiSetupTranslations = {
   english: {

@@ -36,6 +36,7 @@ class ChatResponseStyleTests(unittest.TestCase):
         self.assertIn("official representative of the company", prompt)
         self.assertIn('"kami"', prompt)
         self.assertIn('Never say "based on the company profile"', prompt)
+        self.assertIn("Never reveal, guess, or discuss the underlying AI provider", prompt)
 
     def test_rewrites_third_person_company_name_answer(self):
         result = _company_representative_reply(

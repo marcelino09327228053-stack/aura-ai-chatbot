@@ -49,7 +49,8 @@ class CompanyProfileManagerTests(unittest.TestCase):
             "model": "gemini-test",
         }
         result = review_company_profile("Test", 7)
-        self.assertEqual(result["provider"], "gemini")
+        self.assertNotIn("provider", result)
+        self.assertNotIn("model", result)
         generate_reply.assert_called_once()
         prompt = generate_reply.call_args.args[0]
         self.assertIn("Build arranged_profile ONLY", prompt)

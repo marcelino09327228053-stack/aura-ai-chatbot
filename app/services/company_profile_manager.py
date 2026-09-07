@@ -144,7 +144,6 @@ Rules:
 """
     gateway_result = ai_gateway.generate_sync(prompt, company_id)
     result = _parse_json(gateway_result["reply"])
-    result.update({"provider": gateway_result["provider"], "model": gateway_result["model"]})
     return result
 
 
@@ -191,6 +190,4 @@ Question: {clean_question}
     reply = _company_representative_reply(gateway_result["reply"].strip())
     return {
         "reply": reply,
-        "provider": gateway_result["provider"],
-        "model": gateway_result["model"],
     }

@@ -193,6 +193,8 @@ Rules:
   company name explicitly stated in Company Information.
 - Copy the company name exactly as written in Company Information. Never expand "Inc."
   into "Incorporated", shorten the name, translate it, or alter its legal suffix.
+- Never reveal, guess, or discuss the underlying AI provider, model name, API account,
+  routing order, or server credentials. Identify only as the customer's business assistant.
 
 {response_style_instruction}
 
@@ -251,6 +253,8 @@ Rules:
 - Do not claim a feature is already connected or active unless the user says it is.
 - Do not invent buttons, menus, integrations, prices, or capabilities.
 - This guide is text-only. Never offer or generate text-to-speech audio.
+- Never reveal or guess the underlying AI provider, model name, routing order, API
+  account, or server credentials. Refer to it only as managed AI access.
 
 Recent System Guide Conversation:
 {conversation_context or "No previous guide messages."}
@@ -370,8 +374,6 @@ async def handle_chat(
         )
         reply = gateway_result["reply"]
         successful = [{
-            "provider": gateway_result["provider"],
-            "name": gateway_result["provider"],
             "reply": reply,
             "ok": True,
         }]

@@ -79,8 +79,8 @@ ul { padding-left:18px; color:var(--muted); }
       <p class="muted">See the AI requests and usage deducted from your monthly allowance. You do not need your own provider API key.</p>
       <div style="overflow:auto">
         <table>
-          <thead><tr><th>Provider</th><th>Requests</th><th>Input tokens</th><th>Output tokens</th><th>Estimated cost</th></tr></thead>
-          <tbody id="aiUsageRows"><tr><td colspan="5" class="muted">Loading…</td></tr></tbody>
+          <thead><tr><th>Date</th><th>Request</th><th>Input tokens</th><th>Output tokens</th><th>AI usage deducted</th><th>Status</th></tr></thead>
+          <tbody id="aiUsageRows"><tr><td colspan="6" class="muted">Loading…</td></tr></tbody>
         </table>
       </div>
     </article>
@@ -112,7 +112,6 @@ function authHeaders() {
   return {"Content-Type":"application/json","Authorization":"Bearer "+token};
 }
 function moneyMinor(value){ return new Intl.NumberFormat("en-PH",{style:"currency",currency:"PHP"}).format(Number(value||0)/100); }
-function moneyUsd(value){ return new Intl.NumberFormat("en-US",{style:"currency",currency:"USD",maximumFractionDigits:6}).format(Number(value||0)); }
 function dateText(value){ return value ? new Date(value).toLocaleString() : "No expiration"; }
 function planLabel(plan){ return plan==="test" ? "Subscription" : "Free"; }
 
@@ -150,10 +149,10 @@ async function loadSubscription(){
   document.getElementById("paymentRows").innerHTML=payments.length?payments.map(p=>
     `<tr><td>${dateText(p.created_at)}</td><td>AI Chatbot subscription</td><td>${moneyMinor(p.amount)}</td><td>${p.method}</td><td>${p.status}</td></tr>`
   ).join(""):`<tr><td colspan="5" class="muted">No AI Chatbot payments recorded yet.</td></tr>`;
-  const providerUsage=data.ai_usage?.providers||[];
-  document.getElementById("aiUsageRows").innerHTML=providerUsage.length?providerUsage.map(item=>
-    `<tr><td>${item.provider}</td><td>${item.requests}</td><td>${item.input_tokens}</td><td>${item.output_tokens}</td><td>${item.estimated_cost===null?"Check provider":moneyUsd(item.estimated_cost)}</td></tr>`
-  ).join(""):`<tr><td colspan="5" class="muted">No AI provider usage recorded yet.</td></tr>`;
+  const recentUsage=data.recent_ai_usage||[];
+  document.getElementById("aiUsageRows").innerHTML=recentUsage.length?recentUsage.map(item=>
+    `<tr><td>${dateText(item.created_at)}</td><td>${item.request_id||"—"}</td><td>${item.input_tokens}</td><td>${item.output_tokens}</td><td>${moneyMinor(item.allowance_deducted_minor||0)}</td><td>${item.status}</td></tr>`
+  ).join(""):`<tr><td colspan="6" class="muted">No AI usage recorded yet.</td></tr>`;
 }
 async function upgrade(plan){
   const res=await fetch("/subscription/upgrade",{method:"POST",headers:authHeaders(),body:JSON.stringify({plan})});

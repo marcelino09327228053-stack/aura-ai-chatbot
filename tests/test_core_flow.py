@@ -365,13 +365,20 @@ class CoreFlowTests(unittest.TestCase):
     def test_ai_provider_status_never_exposes_keys(self):
         response = self.client.get("/ai/providers", headers=self.headers)
         self.assertEqual(response.status_code, 200)
-        providers = response.json()["providers"]
-        self.assertEqual(
-            {item["id"] for item in providers},
-            {"gemini", "openai", "claude", "deepseek", "grok", "groq"},
-        )
-        self.assertTrue(all("api_key" not in item for item in providers))
-        self.assertTrue(all(item["managed_by_gateway"] for item in providers))
+        data = response.json()
+        self.assertTrue(data["managed_by_gateway"])
+        self.assertNotIn("providers", data)
+        self.assertNotIn("model", data)
+
+        subscription = self.client.get("/subscription/status", headers=self.headers).json()
+        for item in subscription.get("recent_ai_usage", []):
+            self.assertNotIn("provider", item)
+            self.assertNotIn("model", item)
+            self.assertNotIn("estimated_cost", item)
+        for item in subscription.get("recent_gateway_requests", []):
+            self.assertNotIn("provider", item)
+            self.assertNotIn("model", item)
+            self.assertNotIn("provider_cost_usd", item)
 
     def test_facebook_webhook_verification_and_signature(self):
         os.environ["FACEBOOK_VERIFY_TOKEN"] = "aura-facebook-test-token"
@@ -624,6 +631,8 @@ class CoreFlowTests(unittest.TestCase):
             self.assertEqual(len(data["provider_responses"]), 1)
             self.assertEqual(generated.call_args.args[1], "openai")
             self.assertIn("Answer from openai", data["reply"])
+            self.assertNotIn("provider", data["provider_responses"][0])
+            self.assertNotIn("model", data["provider_responses"][0])
         finally:
             os.environ["OPENAI_API_KEY"] = ""
             ai_gateway.AI_MODEL_COSTS_USD.pop("test-core-model", None)
