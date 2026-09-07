@@ -15,11 +15,13 @@ def verify_totp(code: str) -> bool:
     try: return any(hmac.compare_digest(str(code).zfill(6),_totp(secret,now+step)) for step in (-1,0,1))
     except (ValueError,TypeError): return False
 
-def verify_login(password: str, code: str) -> None:
+def verify_login(email: str, password: str, code: str) -> None:
+    configured_email=os.getenv("OWNER_EMAIL","").strip().casefold()
+    email_ok=bool(configured_email) and hmac.compare_digest(email.strip().casefold(),configured_email)
     stored=os.getenv("OWNER_PASSWORD_HASH","").encode()
     try: password_ok=bool(stored) and bcrypt.checkpw(password.encode(),stored)
     except (ValueError,TypeError): password_ok=False
-    if not password_ok or not verify_totp(code):
+    if not email_ok or not password_ok or not verify_totp(code):
         raise HTTPException(status_code=401,detail="Invalid owner credentials or MFA code.")
 
 def create_session() -> str:

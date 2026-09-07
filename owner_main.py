@@ -23,7 +23,7 @@ async def private_network_only(request:Request,call_next):
     if not permitted: return Response("Private Owner Console",status_code=403)
     return await call_next(request)
 
-class Login(BaseModel): password:str; code:str
+class Login(BaseModel): email:str; password:str; code:str
 class ProviderKey(BaseModel): api_key:str
 class AgentControl(BaseModel): enabled:bool
 class ProviderTest(BaseModel): confirm_billable:bool=False
@@ -32,7 +32,7 @@ class ProviderTest(BaseModel): confirm_billable:bool=False
 def page(): return FileResponse("owner-console.html")
 @app.post("/owner/login")
 def login(body:Login,response:Response):
-    verify_login(body.password,body.code); token=create_session()
+    verify_login(body.email,body.password,body.code); token=create_session()
     response.set_cookie("owner_session",token,httponly=True,samesite="strict",secure=os.getenv("OWNER_COOKIE_SECURE","false").lower()=="true",max_age=1800)
     record("owner.login"); return {"ok":True}
 @app.post("/owner/logout")
