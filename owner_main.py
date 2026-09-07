@@ -23,13 +23,16 @@ async def private_network_only(request:Request,call_next):
     if not permitted: return Response("Private Owner Console",status_code=403)
     return await call_next(request)
 
-class Login(BaseModel): email:str; password:str; code:str
+class Login(BaseModel): email:str; password:str; code:str=""
 class ProviderKey(BaseModel): api_key:str
 class AgentControl(BaseModel): enabled:bool
 class ProviderTest(BaseModel): confirm_billable:bool=False
 
 @app.get("/")
 def page(): return FileResponse("owner-console.html")
+@app.get("/owner/auth-config")
+def auth_config():
+    return {"mfa_required":os.getenv("OWNER_MFA_REQUIRED","true").lower() not in {"false","0","no"}}
 @app.post("/owner/login")
 def login(body:Login,response:Response):
     verify_login(body.email,body.password,body.code); token=create_session()

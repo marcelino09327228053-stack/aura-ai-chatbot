@@ -27,4 +27,9 @@ class OwnerSecurityTests(unittest.TestCase):
             with self.assertRaises(HTTPException):
                 security.verify_login("attacker@example.com","strong-password",code)
 
+    def test_mfa_can_be_deferred_for_local_setup(self):
+        env={**self.env(),"OWNER_MFA_REQUIRED":"false"}
+        with patch.dict(os.environ,env,clear=False):
+            security.verify_login("owner@example.com","strong-password","")
+
 if __name__=="__main__": unittest.main()

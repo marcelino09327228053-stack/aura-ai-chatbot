@@ -21,7 +21,9 @@ def verify_login(email: str, password: str, code: str) -> None:
     stored=os.getenv("OWNER_PASSWORD_HASH","").encode()
     try: password_ok=bool(stored) and bcrypt.checkpw(password.encode(),stored)
     except (ValueError,TypeError): password_ok=False
-    if not email_ok or not password_ok or not verify_totp(code):
+    mfa_required=os.getenv("OWNER_MFA_REQUIRED","true").lower() not in {"false","0","no"}
+    mfa_ok=verify_totp(code) if mfa_required else True
+    if not email_ok or not password_ok or not mfa_ok:
         raise HTTPException(status_code=401,detail="Invalid owner credentials or MFA code.")
 
 def create_session() -> str:
