@@ -8,7 +8,7 @@ from app.owner import security
 class OwnerSecurityTests(unittest.TestCase):
     def env(self):
         secret=base64.b32encode(b"12345678901234567890").decode().rstrip("=")
-        return {"OWNER_EMAIL":"owner@example.com","OWNER_TOTP_SECRET":secret,"OWNER_PASSWORD_HASH":bcrypt.hashpw(b"strong-password",bcrypt.gensalt()).decode(),"OWNER_CONSOLE_SECRET":"s"*40}
+        return {"OWNER_EMAIL":"owner@example.com","OWNER_TOTP_SECRET":secret,"OWNER_MFA_REQUIRED":"true","OWNER_PASSWORD_HASH":bcrypt.hashpw(b"strong-password",bcrypt.gensalt()).decode(),"OWNER_CONSOLE_SECRET":"s"*40}
     def test_password_totp_and_short_session(self):
         env=self.env()
         with patch.dict(os.environ,env,clear=False), patch("app.owner.security.time.time",return_value=1700000000):
