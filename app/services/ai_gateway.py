@@ -37,7 +37,10 @@ def _provider_cost(model: str, input_tokens: int, output_tokens: int) -> float |
 
 
 def _allowance_charge_minor(provider_cost_usd: float) -> int:
-    return max(0, math.ceil(provider_cost_usd * AI_GATEWAY_USD_TO_ALLOWANCE_RATE * 100))
+    from app.referrals.repository import current_pricing
+    markup_bps = max(0, int(current_pricing().get("ai_usage_markup_bps", 0)))
+    multiplier = 1 + (markup_bps / 10_000)
+    return max(0, math.ceil(provider_cost_usd * AI_GATEWAY_USD_TO_ALLOWANCE_RATE * 100 * multiplier))
 
 
 def _error_status(exc: Exception) -> int | None:
@@ -135,7 +138,7 @@ async def generate(prompt: str, company_id: int, user_id: int | None,
                         if cost is None:
                             raise RuntimeError("provider_cost_unconfigured")
                         charge_minor = _allowance_charge_minor(cost)
-                        if charge_minor > subscription["remaining_allowance_minor"]:
+                        if charge_minor > subscription["remaining_ai_credit_minor"]:
                             ai_gateway_repository.fail_request(request_id, "allowance_exhausted", attempts, provider, model)
                             emit("allowance_exhausted", request_id=request_id, company_id=company_id)
                             raise HTTPException(status_code=402, detail="Monthly AI allowance is exhausted.")

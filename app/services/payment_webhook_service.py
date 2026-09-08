@@ -7,6 +7,7 @@ import os
 
 from fastapi import HTTPException
 from app.core.config import AI_PLAN_CONFIG, PAYMENT_WEBHOOK_MAX_AGE_SECONDS
+from app.referrals.repository import current_pricing
 from app.database.payment_event_repository import activate_from_event
 
 def verify_signature(raw_body: bytes, signature: str | None) -> None:
@@ -29,6 +30,9 @@ def process_event(raw_body: bytes, signature: str | None) -> dict:
     configured_provider = os.getenv("PAYMENT_WEBHOOK_PROVIDER", "").strip().lower()
     if configured_provider and str(payload["provider"]).lower() != configured_provider:
         raise HTTPException(status_code=400, detail="Unexpected payment provider.")
+    event_type = str(payload.get("event_type", "initial_subscription")).lower()
+    if event_type not in {"initial_subscription","subscription_renewal","ai_topup","refund","chargeback"}:
+        raise HTTPException(status_code=400, detail="Unknown payment event type.")
     if str(payload["status"]).lower() != "succeeded":
         return {"accepted": True, "activated": False, "reason": "payment_not_successful"}
     try:
@@ -42,14 +46,30 @@ def process_event(raw_body: bytes, signature: str | None) -> dict:
     plan = str(payload["plan"]).lower(); config = AI_PLAN_CONFIG.get(plan)
     currency = str(payload["currency"]).upper()
     if not config or plan == "free": raise HTTPException(status_code=400, detail="Unknown paid plan.")
-    if amount_minor != int(config["price_minor"]) or currency != str(config["currency"]).upper():
+    pricing = current_pricing()
+    expected = {
+        "initial_subscription": int(pricing["monthly_platform_price_minor"]) + int(pricing["initial_ai_credit_minor"]),
+        "subscription_renewal": int(pricing["monthly_platform_price_minor"]),
+        "ai_topup": amount_minor,
+        "refund": amount_minor,
+        "chargeback": amount_minor,
+    }[event_type]
+    if event_type == "ai_topup" and amount_minor < int(pricing["minimum_ai_topup_minor"]):
+        raise HTTPException(status_code=400, detail="AI top-up is below the configured minimum.")
+    if event_type in {"initial_subscription","subscription_renewal"} and amount_minor != expected:
+        raise HTTPException(status_code=400, detail="Payment amount does not match current pricing.")
+    if currency != str(pricing["currency"]).upper():
         raise HTTPException(status_code=400, detail="Payment amount or currency does not match the plan.")
+    refund_of = str(payload.get("refund_of_event_id", "")).strip() or None
+    if event_type in {"refund","chargeback"} and not refund_of:
+        raise HTTPException(status_code=400, detail="Refund/chargeback must reference the original payment event.")
+    credit_grant = int(pricing["initial_ai_credit_minor"]) if event_type == "initial_subscription" else (amount_minor if event_type == "ai_topup" else 0)
     canonical = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
     try:
         event, subscription, duplicate = activate_from_event(
             str(payload["event_id"]), str(payload["provider"]).lower(), company_id,
-            plan, amount_minor, currency, int(config["monthly_ai_allowance_minor"]),
-            hashlib.sha256(canonical).hexdigest(),
+            plan, amount_minor, currency, credit_grant,
+            hashlib.sha256(canonical).hexdigest(), event_type, refund_of,
         )
     except ValueError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc

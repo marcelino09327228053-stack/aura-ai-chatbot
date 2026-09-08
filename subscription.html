@@ -37,7 +37,7 @@ ul { padding-left:18px; color:var(--muted); }
 <body>
 <main class="wrap">
   <header class="header">
-    <div><h1>Subscription & AI Usage</h1><div class="muted">Choose Free or Subscription and monitor your monthly AI usage.</div></div>
+    <div><h1>Subscription & AI Credits</h1><div class="muted">Manage platform access and your separate consumable AI-credit balance.</div></div>
     <div class="header-actions">
       <button type="button" class="secondary" onclick="goBackToPreviousPage()" aria-label="Go back">← Back</button>
       <a class="btn secondary" href="/test-center">System Test Center</a>
@@ -54,7 +54,7 @@ ul { padding-left:18px; color:var(--muted); }
       <button id="renewButton" style="margin-top:16px" disabled>Payment activation coming soon</button>
     </article>
     <article class="card">
-      <span class="muted">Monthly AI allowance</span>
+      <span class="muted">AI credit balance</span>
       <div id="messageUsage" class="metric">—</div>
       <div id="remainingAllowance" class="muted">Managed AI access; no provider API key is required.</div>
     </article>
@@ -76,7 +76,7 @@ ul { padding-left:18px; color:var(--muted); }
 
     <article class="card wide">
       <h2>Your AI usage</h2>
-      <p class="muted">See the AI requests and usage deducted from your monthly allowance. You do not need your own provider API key.</p>
+      <p class="muted">Actual AI usage is deducted from your consumable credits. Unused credits remain after subscription renewal.</p>
       <div style="overflow:auto">
         <table>
           <thead><tr><th>Date</th><th>Request</th><th>Input tokens</th><th>Output tokens</th><th>AI usage deducted</th><th>Status</th></tr></thead>
@@ -128,8 +128,8 @@ async function loadSubscription(){
     ? `${sub.days_remaining} day(s) remaining • Expires ${dateText(sub.expires_at)}`
     : "Free plan • No expiration";
   document.getElementById("renewButton").style.display=sub.plan==="free"?"none":"inline-block";
-  document.getElementById("messageUsage").textContent=`${moneyMinor(sub.ai_usage_consumed_minor||0)} / ${moneyMinor(sub.monthly_ai_allowance_minor||0)} AI usage`;
-  document.getElementById("remainingAllowance").textContent=`${moneyMinor(sub.remaining_allowance_minor||0)} remaining in this billing cycle.`;
+  document.getElementById("messageUsage").textContent=`${moneyMinor(sub.ai_usage_consumed_minor||0)} lifetime AI usage`;
+  document.getElementById("remainingAllowance").textContent=`${moneyMinor(sub.remaining_ai_credit_minor||0)} consumable AI credits remaining.`;
   if(data.notification){
     const notice=document.getElementById("expiryNotice");
     notice.style.display="block";
@@ -139,10 +139,11 @@ async function loadSubscription(){
   document.getElementById("planList").innerHTML=plans.filter(plan=>["free","test"].includes(plan.plan)).map(plan=>{
     const active=plan.plan===sub.plan?"active":"";
     const companies=plan.max_companies===null?"Unlimited":plan.max_companies;
-    const allowance=plan.monthly_ai_allowance_minor||0;
-    const price=moneyMinor(plan.price_minor||0)+" / month";
+    const allowance=plan.initial_ai_credit_minor||0;
+    const paid=plan.plan!=="free";
+    const price=paid?moneyMinor((plan.monthly_platform_price_minor||0)+allowance)+" initial":moneyMinor(0);
     return `<div class="card ${active}"><h3>${planLabel(plan.plan)}</h3><div class="metric">${price}</div>
-      <ul><li>${companies} companies</li><li>${moneyMinor(allowance)} monthly AI usage allowance</li><li>Server-managed AI access</li></ul>
+      <ul><li>${companies} companies</li><li>${paid?moneyMinor(plan.monthly_platform_price_minor||0)+" monthly renewal":"No paid renewal"}</li><li>${moneyMinor(allowance)} initial AI credits</li><li>Minimum top-up ${moneyMinor(plan.minimum_ai_topup_minor||0)}</li><li>Server-managed AI access</li></ul>
       ${active?`<button disabled>Current plan</button>`:(plan.plan==="test"?`<button onclick="mockActivate('${plan.plan}')">Choose Subscription</button>`:`<button disabled>Free plan</button>`)}</div>`;
   }).join("");
   const payments=data.payment_history||[];

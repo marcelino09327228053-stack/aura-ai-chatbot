@@ -76,7 +76,8 @@ def verify_confirmation_code(email: str, code: str) -> None:
     login_code_repository.consume_code(record["id"])
 
 
-def verify_login_code(email: str, code: str, company_name: str | None = None) -> dict:
+def verify_login_code(email: str, code: str, company_name: str | None = None,
+                      referral_token: str | None = None) -> dict:
     normalized_email = email.lower().strip()
     submitted_code = code.strip()
     if len(submitted_code) != 6 or not submitted_code.isdigit():
@@ -118,6 +119,7 @@ def verify_login_code(email: str, code: str, company_name: str | None = None) ->
         subscription_repository.create_subscription(company["id"], "free")
         from app.infrastructure.team import service as team_service
         team_service.ensure_owner_member(company["id"], user["id"])
+        _attribute_new_company(company["id"], user["id"], referral_token)
         companies = [company]
 
     company = companies[0]
@@ -142,6 +144,7 @@ def login_with_verified_identity(
     email: str,
     full_name: str = "",
     profile_image: str = "",
+    referral_token: str | None = None,
 ) -> dict:
     """Sign in with a verified external identity and link matching emails safely."""
     from app.database import oauth_identity_repository
@@ -173,6 +176,7 @@ def login_with_verified_identity(
         subscription_repository.create_subscription(company["id"], "free")
         from app.infrastructure.team import service as team_service
         team_service.ensure_owner_member(company["id"], user["id"])
+        _attribute_new_company(company["id"], user["id"], referral_token)
         companies = [company]
 
     company = companies[0]
@@ -188,7 +192,8 @@ def login_with_verified_identity(
     }
 
 
-def register_user(email: str, password: str, company_name: str) -> dict:
+def register_user(email: str, password: str, company_name: str,
+                  referral_token: str | None = None) -> dict:
     if len(password) < 6:
         raise HTTPException(status_code=400, detail="Password must be at least 6 characters.")
 
@@ -200,6 +205,7 @@ def register_user(email: str, password: str, company_name: str) -> dict:
     subscription_repository.create_subscription(company["id"], "free")
     from app.infrastructure.team import service as team_service
     team_service.ensure_owner_member(company["id"], user["id"])
+    _attribute_new_company(company["id"], user["id"], referral_token)
     from app.infrastructure.audit import service as audit_service
     audit_service.record("user.register", company["id"], user["id"])
     token = create_access_token(user["id"], company["id"])
@@ -210,6 +216,18 @@ def register_user(email: str, password: str, company_name: str) -> dict:
         "company": company,
         "subscription": subscription_repository.get_subscription_by_company(company["id"]),
     }
+
+
+def _attribute_new_company(company_id: int, user_id: int, token: str | None) -> None:
+    if not token: return
+    from app.referrals.service import agent_id_from_token
+    from app.referrals.repository import create_attribution
+    agent_id = agent_id_from_token(token)
+    if agent_id:
+        _, created = create_attribution(company_id, user_id, agent_id)
+        if created:
+            from app.infrastructure.audit import service as audit_service
+            audit_service.record("referral.attributed", company_id, user_id)
 
 
 def login_user(email: str, password: str) -> dict:

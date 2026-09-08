@@ -135,6 +135,7 @@ def init_db() -> None:
         FOREIGN KEY (company_id) REFERENCES companies(id)
     )
     """)
+    had_credit_balance = _column_exists(cursor, "subscriptions", "ai_credit_balance_minor")
     subscription_columns = {
         "billing_cycle_start": "TEXT",
         "billing_cycle_end": "TEXT",
@@ -143,6 +144,7 @@ def init_db() -> None:
         "ai_usage_consumed_minor": "INTEGER NOT NULL DEFAULT 0",
         "allowance_currency": "TEXT NOT NULL DEFAULT 'PHP'",
         "allowance_reset_at": "TEXT",
+        "ai_credit_balance_minor": "INTEGER NOT NULL DEFAULT 0",
     }
     for column_name, column_type in subscription_columns.items():
         if not _column_exists(cursor, "subscriptions", column_name):
@@ -150,6 +152,11 @@ def init_db() -> None:
                 f"ALTER TABLE subscriptions ADD COLUMN {column_name} {column_type}"
             )
     conn.commit()
+    if not had_credit_balance:
+        cursor.execute("""UPDATE subscriptions SET ai_credit_balance_minor =
+            CASE WHEN monthly_ai_allowance_minor > ai_usage_consumed_minor
+                 THEN monthly_ai_allowance_minor - ai_usage_consumed_minor ELSE 0 END""")
+        conn.commit()
 
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS ai_gateway_requests (
@@ -210,6 +217,13 @@ def init_db() -> None:
         FOREIGN KEY (company_id) REFERENCES companies(id)
     )
     """)
+    for column_name, column_type in {
+        "event_type": "TEXT NOT NULL DEFAULT 'initial_subscription'",
+        "refund_of_event_id": "TEXT",
+    }.items():
+        if not _column_exists(cursor, "payment_webhook_events", column_name):
+            cursor.execute(f"ALTER TABLE payment_webhook_events ADD COLUMN {column_name} {column_type}")
+    conn.commit()
 
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS password_reset_tokens (
@@ -490,6 +504,9 @@ def init_db() -> None:
 
     from app.infrastructure.audit.repository import init_audit_schema
     init_audit_schema(cursor, conn)
+
+    from app.referrals.schema import init_referral_schema
+    init_referral_schema(cursor, conn)
 
     from app.infrastructure.team.repository import init_team_schema
     init_team_schema(cursor, conn)

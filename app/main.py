@@ -11,7 +11,7 @@ Wires together:
 import importlib
 import os
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.middleware.httpsredirect import HTTPSRedirectMiddleware
@@ -49,6 +49,8 @@ from app.api.test_center import router as test_center_router
 from app.api.widget import router as widget_router
 from app.api.knowledge import router as knowledge_router
 from app.api.facebook_messenger import router as facebook_messenger_router
+from app.referrals.router import router as referral_agent_router
+from app.referrals.service import COOKIE_MAX_AGE, COOKIE_NAME, capture_token
 from app.core.config import get_aura_env, get_cors_origins, validate_production_config
 from app.core.middleware import SecurityHeadersMiddleware
 from app.database.connection import init_db
@@ -103,11 +105,27 @@ def create_app() -> FastAPI:
         )
 
     @application.get("/login")
-    async def login_page():
-        return FileResponse("login.html")
+    async def login_page(request: Request, ref: str = ""):
+        response = FileResponse("login.html")
+        if ref:
+            try:
+                token, _ = capture_token(ref)
+                response.set_cookie(COOKIE_NAME, token, max_age=COOKIE_MAX_AGE, httponly=True,
+                                    secure=request.url.scheme == "https", samesite="lax")
+            except HTTPException:
+                pass
+        return response
 
     @application.get("/register")
-    async def register_page():
+    async def register_page(request: Request, ref: str = ""):
+        if ref:
+            try: token, _ = capture_token(ref)
+            except HTTPException: return FileResponse("register.html")
+            from fastapi.responses import RedirectResponse
+            response = RedirectResponse("/login")
+            response.set_cookie(COOKIE_NAME, token, max_age=COOKIE_MAX_AGE, httponly=True,
+                                secure=request.url.scheme == "https", samesite="lax")
+            return response
         return FileResponse("register.html")
 
     @application.get("/dashboard")
@@ -121,6 +139,10 @@ def create_app() -> FastAPI:
     @application.get("/subscription")
     async def subscription_page():
         return FileResponse("subscription.html")
+
+    @application.get("/marketing-agent")
+    async def marketing_agent_page():
+        return FileResponse("marketing-agent.html")
 
     @application.get("/test-center")
     async def test_center_page():
@@ -214,6 +236,7 @@ def create_app() -> FastAPI:
     application.include_router(subscriptions_router)
     application.include_router(ai_operations_router)
     application.include_router(payment_webhooks_router)
+    application.include_router(referral_agent_router)
     application.include_router(test_center_router)
     application.include_router(chat_router)
     application.include_router(ai_providers_router)

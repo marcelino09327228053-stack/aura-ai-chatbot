@@ -91,11 +91,10 @@ def finalize_metered_success(
         cursor.execute("BEGIN IMMEDIATE")
         cursor.execute(
             """UPDATE subscriptions
-               SET ai_usage_consumed_minor = ai_usage_consumed_minor + ?,
-                   status = CASE WHEN ai_usage_consumed_minor + ? >= monthly_ai_allowance_minor
-                                 THEN 'exhausted' ELSE status END
-               WHERE company_id = ? AND status = 'active'
-                 AND ai_usage_consumed_minor + ? <= monthly_ai_allowance_minor
+               SET ai_usage_consumed_minor=ai_usage_consumed_minor+?,
+                   ai_credit_balance_minor=ai_credit_balance_minor-?
+               WHERE company_id=? AND status='active'
+                 AND ai_credit_balance_minor>=?
                  AND EXISTS (SELECT 1 FROM ai_gateway_requests
                              WHERE request_id = ? AND company_id = ? AND status = 'pending')""",
             (allowance_deducted_minor, allowance_deducted_minor, company_id,

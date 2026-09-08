@@ -56,6 +56,17 @@ AI_PLAN_CONFIG = _json_env(
     },
 )
 
+# Owner-editable pricing is stored as effective-dated database rules. This
+# deployment setting controls only the first seeded rule for a new database.
+REFERRAL_PRICING_DEFAULTS = _json_env("REFERRAL_PRICING_DEFAULTS_JSON", {
+    "monthly_platform_price_minor": 100_000,
+    "initial_ai_credit_minor": 50_000,
+    "minimum_ai_topup_minor": 50_000,
+    "referral_commission_minor": 30_000,
+    "ai_usage_markup_bps": 0,
+    "currency": "PHP",
+})
+
 AI_GATEWAY_PROVIDER_ORDER = tuple(
     item.strip().lower()
     for item in os.getenv("AI_GATEWAY_PROVIDER_ORDER", "gemini,openai,claude,groq").split(",")

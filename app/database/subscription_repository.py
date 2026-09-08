@@ -26,7 +26,7 @@ def get_subscription_by_company(company_id: int) -> dict | None:
         SELECT id, company_id, plan, status, expires_at, created_at,
                billing_cycle_start, billing_cycle_end, plan_price_minor,
                monthly_ai_allowance_minor, ai_usage_consumed_minor,
-               allowance_currency, allowance_reset_at
+               allowance_currency, allowance_reset_at, ai_credit_balance_minor
         FROM subscriptions WHERE company_id = ?
         """,
         (company_id,),
@@ -46,11 +46,21 @@ def get_subscription_by_company(company_id: int) -> dict | None:
         "plan_price_minor": row["plan_price_minor"],
         "monthly_ai_allowance_minor": row["monthly_ai_allowance_minor"],
         "ai_usage_consumed_minor": row["ai_usage_consumed_minor"],
-        "remaining_allowance_minor": max(
-            0, row["monthly_ai_allowance_minor"] - row["ai_usage_consumed_minor"]
+        # Backward-compatible response name; this is now a non-expiring balance.
+        "remaining_allowance_minor": min(
+            max(0, row["ai_credit_balance_minor"]),
+            max(0, row["monthly_ai_allowance_minor"] - row["ai_usage_consumed_minor"]),
         ),
         "allowance_currency": row["allowance_currency"],
         "allowance_reset_at": row["allowance_reset_at"],
+        "ai_credit_balance_minor": min(
+            max(0, row["ai_credit_balance_minor"]),
+            max(0, row["monthly_ai_allowance_minor"] - row["ai_usage_consumed_minor"]),
+        ),
+        "remaining_ai_credit_minor": min(
+            max(0, row["ai_credit_balance_minor"]),
+            max(0, row["monthly_ai_allowance_minor"] - row["ai_usage_consumed_minor"]),
+        ),
     }
 
 
@@ -119,7 +129,7 @@ def activate_subscription(
     cycle_start: datetime | None = None,
     cycle_end: datetime | None = None,
 ) -> dict | None:
-    """Activate a paid billing cycle. Future payment webhooks call this function."""
+    """Activate a paid billing cycle and grant optional initial consumable credits."""
     start = cycle_start or datetime.now(timezone.utc)
     end = cycle_end or (start + timedelta(days=30))
     conn = get_connection()
@@ -129,8 +139,9 @@ def activate_subscription(
         UPDATE subscriptions
         SET plan = ?, status = 'active', expires_at = ?,
             billing_cycle_start = ?, billing_cycle_end = ?,
-            plan_price_minor = ?, monthly_ai_allowance_minor = ?,
-            ai_usage_consumed_minor = 0, allowance_currency = ?, allowance_reset_at = ?
+            plan_price_minor = ?, allowance_currency = ?, allowance_reset_at = ?,
+            monthly_ai_allowance_minor=?, ai_usage_consumed_minor=0,
+            ai_credit_balance_minor = ?
         WHERE company_id = ?
         """,
         (
@@ -139,9 +150,8 @@ def activate_subscription(
             start.isoformat(),
             end.isoformat(),
             max(0, int(plan_price_minor)),
+            allowance_currency, end.isoformat(), max(0, int(monthly_ai_allowance_minor)),
             max(0, int(monthly_ai_allowance_minor)),
-            allowance_currency,
-            end.isoformat(),
             company_id,
         ),
     )
@@ -149,9 +159,7 @@ def activate_subscription(
     return get_subscription_by_company(company_id) if cursor.rowcount else None
 
 
-def reset_allowance_if_due(
-    company_id: int, monthly_ai_allowance_minor: int
-) -> dict | None:
+def reset_allowance_if_due(company_id: int, monthly_ai_allowance_minor: int = 0) -> dict | None:
     current = get_subscription_by_company(company_id)
     if not current or not current.get("billing_cycle_end"):
         return current
@@ -164,31 +172,8 @@ def reset_allowance_if_due(
     now = datetime.now(timezone.utc)
     if cycle_end > now:
         return current
-    # Advance complete 30-day cycles so delayed jobs do not reset repeatedly.
-    next_end = cycle_end
-    while next_end <= now:
-        next_end += timedelta(days=30)
-    conn = get_connection()
-    conn.cursor().execute(
-        """
-        UPDATE subscriptions
-        SET status = 'active', billing_cycle_start = ?, billing_cycle_end = ?,
-            expires_at = ?, monthly_ai_allowance_minor = ?,
-            ai_usage_consumed_minor = 0,
-            allowance_reset_at = ?
-        WHERE company_id = ? AND status != 'suspended'
-        """,
-        (
-            (next_end - timedelta(days=30)).isoformat(),
-            next_end.isoformat(),
-            next_end.isoformat(),
-            max(0, int(monthly_ai_allowance_minor)),
-            next_end.isoformat(),
-            company_id,
-        ),
-    )
-    conn.commit()
-    return get_subscription_by_company(company_id)
+    # Subscription renewals are payment-driven. Credits never reset or expire here.
+    return current
 
 
 def deduct_allowance(company_id: int, amount_minor: int) -> bool:
@@ -198,19 +183,20 @@ def deduct_allowance(company_id: int, amount_minor: int) -> bool:
     cursor = conn.cursor()
     cursor.execute(
         """
-        UPDATE subscriptions
-        SET ai_usage_consumed_minor = ai_usage_consumed_minor + ?,
-            status = CASE
-                WHEN ai_usage_consumed_minor + ? >= monthly_ai_allowance_minor THEN 'exhausted'
-                ELSE status
-            END
-        WHERE company_id = ? AND status = 'active'
-          AND ai_usage_consumed_minor + ? <= monthly_ai_allowance_minor
+        UPDATE subscriptions SET ai_usage_consumed_minor=ai_usage_consumed_minor+?,
+            ai_credit_balance_minor=ai_credit_balance_minor-?
+        WHERE company_id=? AND status='active' AND ai_credit_balance_minor>=?
         """,
         (amount_minor, amount_minor, company_id, amount_minor),
     )
     conn.commit()
     return cursor.rowcount == 1
+
+
+def add_ai_credits(company_id: int, amount_minor: int) -> dict | None:
+    conn=get_connection(); cursor=conn.cursor()
+    cursor.execute("UPDATE subscriptions SET ai_credit_balance_minor=ai_credit_balance_minor+? WHERE company_id=?", (max(0,int(amount_minor)), company_id))
+    conn.commit(); return get_subscription_by_company(company_id) if cursor.rowcount else None
 
 
 def mark_expired(company_id: int) -> dict | None:

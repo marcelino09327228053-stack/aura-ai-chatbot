@@ -30,10 +30,7 @@ def get_subscription_status(company_id: int) -> dict:
             "notification": None,
         }
 
-    plan_config = AI_PLAN_CONFIG.get(sub["plan"], {})
-    sub = subscription_repository.reset_allowance_if_due(
-        company_id, int(plan_config.get("monthly_ai_allowance_minor", 0))
-    ) or sub
+    sub = subscription_repository.reset_allowance_if_due(company_id) or sub
     days_remaining = None
     notification = None
     if sub["plan"] != "free" and sub.get("expires_at"):
@@ -80,12 +77,8 @@ def prepare_gateway_access(company_id: int) -> dict:
         raise HTTPException(status_code=403, detail="AI access is suspended.")
     if status["status"] not in ("active",):
         raise HTTPException(status_code=402, detail="An active subscription is required.")
-    if int(status.get("remaining_allowance_minor", 0)) <= 0:
-        if status.get("monthly_ai_allowance_minor", 0):
-            # Normalize an old active row whose allowance was just consumed.
-            conn_status = subscription_repository.get_subscription_by_company(company_id)
-            status = conn_status or status
-        raise HTTPException(status_code=402, detail="Monthly AI allowance is exhausted.")
+    if int(status.get("remaining_ai_credit_minor", 0)) <= 0:
+        raise HTTPException(status_code=402, detail="AI credits are exhausted. Top up to continue.")
     return status
 
 
@@ -143,6 +136,8 @@ def check_message_limit(company_id: int) -> None:
 
 
 def get_plan_catalog() -> list[dict]:
+    from app.referrals.repository import current_pricing
+    pricing = current_pricing()
     return [
         {
             "plan": plan,
@@ -152,6 +147,9 @@ def get_plan_catalog() -> list[dict]:
             ),
             "currency": str(config.get("currency", "PHP")),
             "max_companies": config.get("max_companies"),
+            "monthly_platform_price_minor": int(pricing["monthly_platform_price_minor"]),
+            "initial_ai_credit_minor": int(pricing["initial_ai_credit_minor"]),
+            "minimum_ai_topup_minor": int(pricing["minimum_ai_topup_minor"]),
         }
         for plan, config in AI_PLAN_CONFIG.items()
     ]

@@ -181,6 +181,7 @@ async def google_callback(
         str(userinfo["email"]),
         str(userinfo.get("name", "")),
         str(userinfo.get("picture", "")),
+        request.cookies.get("mb_referral"),
     )
     safe_result = json.dumps({
         "token": result["token"],
@@ -203,13 +204,15 @@ def request_code(body: RequestLoginCodeRequest):
 
 
 @router.post("/verify-code")
-def verify_code(body: VerifyLoginCodeRequest):
-    return auth_service.verify_login_code(body.email, body.code, body.company_name)
+def verify_code(body: VerifyLoginCodeRequest, request: Request):
+    return auth_service.verify_login_code(body.email, body.code, body.company_name,
+                                          request.cookies.get("mb_referral"))
 
 
 @router.post("/register")
-def register(body: RegisterRequest):
-    return auth_service.register_user(body.email, body.password, body.company_name)
+def register(body: RegisterRequest, request: Request):
+    return auth_service.register_user(body.email, body.password, body.company_name,
+                                      request.cookies.get("mb_referral"))
 
 
 @router.post("/login")

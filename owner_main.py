@@ -10,6 +10,7 @@ from app.owner import repository
 from app.owner.security import create_session, require_owner, verify_login
 from app.services import ai_service
 from app.services.ai_provider_router import provider_health
+from app.referrals import repository as referral_repository
 
 app=FastAPI(docs_url=None,redoc_url=None,openapi_url=None)
 init_db(); repository.init_owner_schema()
@@ -27,6 +28,14 @@ class Login(BaseModel): email:str; password:str; code:str=""
 class ProviderKey(BaseModel): api_key:str
 class AgentControl(BaseModel): enabled:bool
 class ProviderTest(BaseModel): confirm_billable:bool=False
+class PricingSettings(BaseModel):
+    monthly_platform_price_minor:int; initial_ai_credit_minor:int
+    minimum_ai_topup_minor:int; referral_commission_minor:int
+    ai_usage_markup_bps:int=0; currency:str="PHP"
+class AgentDecision(BaseModel): status:str; notes:str=""
+class AttributionCorrection(BaseModel): agent_id:int; reason:str
+class PayoutCreate(BaseModel): agent_id:int; commission_ids:list[int]
+class PayoutUpdate(BaseModel): status:str; payment_reference:str=""
 
 @app.get("/")
 def page(): return FileResponse("owner-console.html")
@@ -43,7 +52,10 @@ def logout(response:Response): response.delete_cookie("owner_session"); return {
 @app.get("/owner/dashboard")
 def dashboard(_:None=Depends(require_owner)):
     return {"overview":repository.overview(),"subscribers":repository.subscribers(),"providers":repository.list_providers(),
-            "provider_health":provider_health.snapshot(),"agents":[{"agent_type":a,"enabled":repository.agent_enabled(a)} for a in AGENT_TYPES],"audit":get_logs(None,50)}
+            "provider_health":provider_health.snapshot(),"agents":[{"agent_type":a,"enabled":repository.agent_enabled(a)} for a in AGENT_TYPES],"audit":get_logs(None,50),
+            "pricing":referral_repository.current_pricing(),"referral_agents":referral_repository.list_agents(),
+            "attributions":referral_repository.list_attributions(),"commissions":referral_repository.list_commissions(),
+            "payouts":referral_repository.list_payouts()}
 @app.post("/owner/providers/{provider}")
 def save_provider(provider:str,body:ProviderKey,_:None=Depends(require_owner)):
     if provider not in ai_service.PROVIDERS: raise HTTPException(404,"Unknown provider")
@@ -64,3 +76,40 @@ def delete_provider(provider:str,_:None=Depends(require_owner)):
 def agent_control(agent_type:str,body:AgentControl,_:None=Depends(require_owner)):
     if agent_type not in AGENT_TYPES: raise HTTPException(404,"Unknown agent")
     repository.set_agent(agent_type,body.enabled); record(f"owner.agent.{agent_type}:{body.enabled}"); return {"agent_type":agent_type,"enabled":body.enabled}
+
+@app.put("/owner/pricing")
+def update_pricing(body:PricingSettings,_:None=Depends(require_owner)):
+    values=body.model_dump()
+    if any(values[k]<0 for k in ("monthly_platform_price_minor","initial_ai_credit_minor","minimum_ai_topup_minor","referral_commission_minor","ai_usage_markup_bps")):
+        raise HTTPException(400,"Pricing values cannot be negative")
+    if values["ai_usage_markup_bps"]>100000: raise HTTPException(400,"Markup is too large")
+    if len(values["currency"].strip())!=3: raise HTTPException(400,"Use a three-letter currency")
+    values["currency"]=values["currency"].upper()
+    result=referral_repository.create_pricing_rule(values); record("owner.referral.pricing.updated"); return result
+
+@app.put("/owner/referral-agents/{agent_id}")
+def decide_agent(agent_id:int,body:AgentDecision,_:None=Depends(require_owner)):
+    if body.status not in {"pending","approved","suspended","rejected"}: raise HTTPException(400,"Invalid agent status")
+    result=referral_repository.set_agent_status(agent_id,body.status,body.notes)
+    if not result: raise HTTPException(404,"Referral agent not found")
+    record(f"owner.referral_agent.{body.status}:{agent_id}"); return result
+
+@app.put("/owner/referral-attributions/{company_id}")
+def correct_attribution(company_id:int,body:AttributionCorrection,_:None=Depends(require_owner)):
+    if len(body.reason.strip())<5: raise HTTPException(400,"A correction reason is required")
+    result=referral_repository.correct_attribution(company_id,body.agent_id,body.reason)
+    if not result: raise HTTPException(404,"Attribution or approved agent not found")
+    record(f"owner.referral.attribution.corrected:{company_id}:{body.agent_id}",company_id); return result
+
+@app.post("/owner/referral-payouts",status_code=201)
+def create_payout(body:PayoutCreate,_:None=Depends(require_owner)):
+    try: result=referral_repository.create_payout(body.agent_id,body.commission_ids)
+    except ValueError as exc: raise HTTPException(400,str(exc)) from exc
+    record(f"owner.referral.payout.created:{result['id']}"); return result
+
+@app.put("/owner/referral-payouts/{payout_id}")
+def update_payout(payout_id:int,body:PayoutUpdate,_:None=Depends(require_owner)):
+    if body.status not in {"pending","approved","paid","cancelled"}: raise HTTPException(400,"Invalid payout status")
+    result=referral_repository.update_payout(payout_id,body.status,body.payment_reference)
+    if not result: raise HTTPException(404,"Payout not found")
+    record(f"owner.referral.payout.{body.status}:{payout_id}"); return result

@@ -37,7 +37,7 @@ def overview():
 
 def subscribers():
     rows=get_connection().cursor().execute("""SELECT c.id,c.company_name,s.plan,s.status,s.billing_cycle_end,
-      s.monthly_ai_allowance_minor,s.ai_usage_consumed_minor FROM companies c JOIN subscriptions s ON s.company_id=c.id ORDER BY c.id DESC LIMIT 500""").fetchall()
+      s.monthly_ai_allowance_minor,s.ai_usage_consumed_minor,s.ai_credit_balance_minor FROM companies c JOIN subscriptions s ON s.company_id=c.id ORDER BY c.id DESC LIMIT 500""").fetchall()
     return [dict(row) for row in rows]
 
 def set_agent(agent_type:str,enabled:bool):
