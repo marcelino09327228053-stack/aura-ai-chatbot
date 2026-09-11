@@ -24,6 +24,14 @@ from main import app
 class GoogleOAuthTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
+        from app.infrastructure.database import sqlite_backend
+        from app.database.connection import init_db
+        if sqlite_backend._conn is not None:
+            sqlite_backend._conn.close()
+            sqlite_backend._conn = None
+        sqlite_backend.SQLITE_PATH = str(test_db)
+        test_db.unlink(missing_ok=True)
+        init_db()
         cls.client = TestClient(app, raise_server_exceptions=False)
 
     @classmethod

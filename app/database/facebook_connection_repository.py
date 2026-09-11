@@ -69,9 +69,14 @@ def save_oauth_session(session_id: str, company_id: int, user_id: int, pages: li
     conn = get_connection()
     conn.cursor().execute(
         """
-        INSERT OR REPLACE INTO facebook_oauth_sessions
+        INSERT INTO facebook_oauth_sessions
         (session_id, company_id, user_id, encrypted_pages, expires_at)
         VALUES (?, ?, ?, ?, ?)
+        ON CONFLICT(session_id) DO UPDATE SET
+            company_id = excluded.company_id,
+            user_id = excluded.user_id,
+            encrypted_pages = excluded.encrypted_pages,
+            expires_at = excluded.expires_at
         """,
         (session_id, company_id, user_id, encrypt_value(json.dumps(pages)), expires_at),
     )

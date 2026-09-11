@@ -43,7 +43,7 @@ def _migrate_faq_company_scope(cursor, conn) -> None:
     cursor.execute("DROP INDEX IF EXISTS idx_faq_question")
     cursor.execute("""
     CREATE UNIQUE INDEX IF NOT EXISTS idx_faq_company_question
-    ON faq (company_id, question COLLATE NOCASE)
+    ON faq (company_id, LOWER(question))
     """)
     conn.commit()
 

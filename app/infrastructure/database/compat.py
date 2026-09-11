@@ -26,7 +26,7 @@ class CompatCursor:
                     self._cursor.execute("SELECT LASTVAL()")
                     row = self._cursor.fetchone()
                     if row:
-                        self.lastrowid = row[0]
+                        self.lastrowid = next(iter(row.values())) if hasattr(row, "values") else row[0]
                 except Exception:
                     self.lastrowid = None
         else:

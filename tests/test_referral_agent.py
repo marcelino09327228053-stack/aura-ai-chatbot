@@ -2,6 +2,7 @@
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from app.database.connection import init_db
 from app.database import payment_event_repository, subscription_repository, user_repository, company_repository
@@ -97,6 +98,49 @@ class ReferralAgentTests(unittest.TestCase):
         self.assertEqual(repository.list_commissions(),[])
         self.assertIsNone(repository.dashboard_for_user(customer["id"]))
         self.assertIsNotNone(repository.dashboard_for_user(agent["user_id"]))
+
+    def test_secure_application_review_and_rejected_agent(self):
+        user,_=self.user_company("applicant@example.com")
+        private=Path(tempfile.gettempdir())/"mb-referral-private-test";private.mkdir(exist_ok=True)
+        values={"full_name":"Applicant Name","email":"applicant@example.com","mobile_number":"09123456789",
+          "address_location":"Manila","id_type":"National ID","id_reference":"REF-1","payout_method":"gcash",
+          "account_holder_name":"Applicant Name","account_number":"09123456789","bank_name":""}
+        png=b"\x89PNG\r\n\x1a\n"+b"safe-test-document"
+        with patch("app.referrals.service.PRIVATE_ID_DIR",private):
+            agent=service.submit_application(user["id"],values,{"filename":"id.png","content_type":"image/png","content":png})
+            self.assertEqual(agent["status"],"pending_verification")
+            stored=repository.get_agent(agent["id"])
+            self.assertNotEqual(stored["encrypted_account_number"],values["account_number"])
+            self.assertNotIn("encrypted_account_number",agent)
+            owner_view=repository.application_for_owner(agent["id"])
+            self.assertEqual(owner_view["account_number"],values["account_number"])
+            path,content_type,_=service.own_document(user["id"])
+            self.assertTrue(path.is_file());self.assertEqual(content_type,"image/png")
+            repository.set_agent_status(agent["id"],"rejected","Verification failed")
+            with self.assertRaises(Exception):service.capture_token(agent["referral_code"])
+            path.unlink(missing_ok=True);private.rmdir()
+
+    def test_hold_period_minimum_payout_and_paid_reference(self):
+        agent_user,agent=self.approved_agent();customer,company=self.user_company("payout-buyer@example.com")
+        from app.cloud.security import encrypt_value
+        conn=sqlite_backend.get_connection();conn.cursor().execute("""UPDATE referral_agents SET payout_method='gcash',encrypted_account_holder=?,encrypted_account_number=? WHERE id=?""",(encrypt_value("Agent"),encrypt_value("09123456789"),agent["id"]));conn.commit()
+        repository.create_attribution(company["id"],customer["id"],agent["id"])
+        repository.create_pricing_rule({"monthly_platform_price_minor":100000,"initial_ai_credit_minor":50000,
+          "minimum_ai_topup_minor":50000,"referral_commission_minor":30000,"ai_usage_markup_bps":0,
+          "currency":"PHP","commission_hold_days":0,"minimum_payout_minor":100000,"payout_schedule":"weekly"},"test")
+        payment_event_repository.activate_from_event("hold-pay","provider",company["id"],"test",100000,"PHP",0,"hold-hash","subscription_renewal")
+        repository.refresh_available_commissions(agent["id"])
+        self.assertEqual(repository.dashboard_for_user(agent_user["id"])["available_minor"],30000)
+        with self.assertRaises(ValueError):repository.request_payout(agent_user["id"])
+        repository.create_pricing_rule({"monthly_platform_price_minor":100000,"initial_ai_credit_minor":50000,
+          "minimum_ai_topup_minor":50000,"referral_commission_minor":30000,"ai_usage_markup_bps":0,
+          "currency":"PHP","commission_hold_days":0,"minimum_payout_minor":30000,"payout_schedule":"on_request"},"test")
+        payout=repository.request_payout(agent_user["id"])
+        self.assertEqual(payout["status"],"requested")
+        with self.assertRaises(ValueError):repository.request_payout(agent_user["id"])
+        paid=repository.update_payout(payout["id"],"paid","GCASH-TXN-123")
+        self.assertEqual(paid["payment_reference"],"GCASH-TXN-123")
+        self.assertEqual(repository.dashboard_for_user(agent_user["id"])["paid_minor"],30000)
 
 
 if __name__ == "__main__": unittest.main()

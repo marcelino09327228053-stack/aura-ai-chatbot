@@ -12,7 +12,7 @@ def count_messages_today(company_id: int) -> int:
         SELECT COUNT(*) FROM usage_logs
         WHERE company_id = ?
           AND event_type = 'message'
-          AND date(created_at) = date('now')
+          AND date(created_at) = CURRENT_DATE
         """,
         (company_id,),
     )

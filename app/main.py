@@ -15,7 +15,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.middleware.httpsredirect import HTTPSRedirectMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.agents.router import router as agents_router
@@ -59,7 +59,12 @@ from app.modules import register_modules
 
 def create_app() -> FastAPI:
     validate_production_config()
-    application = FastAPI()
+    production = get_aura_env() == "production"
+    application = FastAPI(
+        docs_url=None if production else "/docs",
+        redoc_url=None if production else "/redoc",
+        openapi_url=None if production else "/openapi.json",
+    )
 
     os.makedirs("static", exist_ok=True)
     application.mount("/static", StaticFiles(directory="static"), name="static")
@@ -88,10 +93,11 @@ def create_app() -> FastAPI:
             database = "ok"
         except Exception:
             database = "error"
-        return {
+        payload = {
             "status": "ok" if database == "ok" else "degraded",
             "database": database,
         }
+        return payload if database == "ok" else JSONResponse(payload, status_code=503)
 
     @application.get("/")
     async def root():

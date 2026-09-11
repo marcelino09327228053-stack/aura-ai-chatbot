@@ -61,7 +61,7 @@ def get_daily_report(company_id: int) -> dict:
         """
         SELECT type, COALESCE(SUM(amount), 0) AS total
         FROM transactions
-        WHERE company_id = ? AND date(created_at) = date('now')
+        WHERE company_id = ? AND date(created_at) = CURRENT_DATE
         GROUP BY type
         """,
         (company_id,),

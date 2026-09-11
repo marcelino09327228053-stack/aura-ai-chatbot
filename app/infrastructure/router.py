@@ -10,6 +10,7 @@ from app.infrastructure.backups import service as backup_service
 from app.infrastructure.database.config import is_postgres
 from app.infrastructure.monitoring import metrics
 from app.infrastructure.profiles import get_env_name, get_profile
+from app.core.config import get_aura_env
 from app.infrastructure.redis.client import is_redis_available
 from app.infrastructure.team import permissions, repository as team_repo
 from app.infrastructure.team import service as team_service
@@ -49,6 +50,9 @@ def monitoring(ctx=Depends(require_auth)):
 
 @router.get("/monitoring/errors")
 def error_logs(ctx=Depends(require_auth)):
+    if get_aura_env() == "production":
+        raise HTTPException(status_code=404)
+    _require_admin(ctx)
     return {
         "buffer": metrics.get_metrics()["recent_errors"],
         "file_logs": metrics.list_error_logs(),
@@ -62,13 +66,13 @@ def audit_logs(ctx=Depends(require_auth)):
 
 @router.get("/backups")
 def list_backups(ctx=Depends(require_auth)):
-    _require_admin(ctx)
+    _require_development_backup_access(ctx)
     return backup_service.list_backups()
 
 
 @router.post("/backups/daily")
 def daily_backup(ctx=Depends(require_auth)):
-    _require_admin(ctx)
+    _require_development_backup_access(ctx)
     result = backup_service.run_daily_backup()
     audit_service.record("backup.daily", ctx.company_id, ctx.user_id)
     return result
@@ -76,7 +80,7 @@ def daily_backup(ctx=Depends(require_auth)):
 
 @router.post("/backups/weekly")
 def weekly_backup(ctx=Depends(require_auth)):
-    _require_admin(ctx)
+    _require_development_backup_access(ctx)
     result = backup_service.run_weekly_backup()
     audit_service.record("backup.weekly", ctx.company_id, ctx.user_id)
     return result
@@ -84,7 +88,7 @@ def weekly_backup(ctx=Depends(require_auth)):
 
 @router.post("/backups/restore")
 def restore_backup(body: RestoreRequest, ctx=Depends(require_auth)):
-    _require_admin(ctx)
+    _require_development_backup_access(ctx)
     result = backup_service.restore_backup(body.backup_name)
     if result.get("ok"):
         audit_service.record(f"backup.restore:{body.backup_name}", ctx.company_id, ctx.user_id)
@@ -148,3 +152,9 @@ def _require_admin(ctx) -> None:
     owner_id = company["owner_id"] if company else None
     if not team_service.check_permission(ctx.company_id, ctx.user_id, owner_id, "manage_team"):
         raise HTTPException(status_code=403, detail="Admin permission required.")
+
+
+def _require_development_backup_access(ctx) -> None:
+    if get_aura_env() == "production":
+        raise HTTPException(status_code=404)
+    _require_admin(ctx)

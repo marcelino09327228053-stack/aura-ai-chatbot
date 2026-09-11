@@ -20,8 +20,8 @@ def ensure_company_agents(company_id: int) -> None:
     for agent_type, name in AGENT_DEFAULTS.items():
         cursor.execute(
             """
-            INSERT OR IGNORE INTO agents (company_id, name, type, enabled)
-            VALUES (?, ?, ?, 1)
+            INSERT INTO agents (company_id, name, type, enabled)
+            VALUES (?, ?, ?, 1) ON CONFLICT(company_id, type) DO NOTHING
             """,
             (company_id, name, agent_type),
         )

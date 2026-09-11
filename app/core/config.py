@@ -64,6 +64,9 @@ REFERRAL_PRICING_DEFAULTS = _json_env("REFERRAL_PRICING_DEFAULTS_JSON", {
     "minimum_ai_topup_minor": 50_000,
     "referral_commission_minor": 30_000,
     "ai_usage_markup_bps": 0,
+    "commission_hold_days": 7,
+    "minimum_payout_minor": 100_000,
+    "payout_schedule": "on_request",
     "currency": "PHP",
 })
 
@@ -149,6 +152,16 @@ def validate_production_config() -> None:
         errors.append("production requires DB_BACKEND=postgres and DATABASE_URL")
     if os.getenv("REDIS_ENABLED", "").lower() not in ("1", "true", "yes") or not os.getenv("REDIS_URL", ""):
         errors.append("production requires REDIS_ENABLED=true and REDIS_URL")
+    if "redis://redis:6379" in os.getenv("REDIS_URL", ""):
+        errors.append("production Redis must require authentication")
+    database_url = os.getenv("DATABASE_URL", "")
+    if "postgresql://aura:aura@" in database_url:
+        errors.append("production must not use the default database password")
+    if os.getenv("MOCK_PAYMENTS_ENABLED", "true").lower() in ("1", "true", "yes"):
+        errors.append("MOCK_PAYMENTS_ENABLED must be false in production")
+    provider = os.getenv("PAYMENT_WEBHOOK_PROVIDER", "").strip().lower()
+    if not provider or provider in {"test", "mock", "your-payment-provider"}:
+        errors.append("PAYMENT_WEBHOOK_PROVIDER must name the configured production provider")
     if not os.getenv("ALLOWED_HOSTS", "").strip():
         errors.append("ALLOWED_HOSTS must contain the production hostname")
     origins = get_cors_origins()
