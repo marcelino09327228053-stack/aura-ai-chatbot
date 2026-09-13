@@ -38,6 +38,20 @@ services:
         value: "true"
       - key: PLUGINS_ENABLED
         value: "false"
+      - key: FACEBOOK_APP_ID
+        sync: false
+      - key: FACEBOOK_APP_SECRET
+        sync: false
+      - key: FACEBOOK_VERIFY_TOKEN
+        sync: false
+      - key: FACEBOOK_PAGE_ACCESS_TOKEN
+        sync: false
+      - key: FACEBOOK_OAUTH_REDIRECT_URI
+        value: https://mb-future-tech-portfolio.onrender.com/webhooks/facebook/oauth/callback
+      - key: FACEBOOK_GRAPH_API_VERSION
+        value: v23.0
+      - key: FACEBOOK_LANGUAGE
+        value: english
 
   - type: keyvalue
     name: mb-future-tech-portfolio-cache
