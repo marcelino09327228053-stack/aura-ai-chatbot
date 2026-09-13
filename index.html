@@ -4150,6 +4150,14 @@ Object.keys(auraTranslations).forEach(function(language) {
   );
 });
 
+// Migrate browsers that inherited the previous Filipino-by-default setting.
+// This runs once; language choices made after the migration remain persistent.
+const AURA_LANGUAGE_DEFAULT_RELEASE = "english-default-v1";
+if (localStorage.getItem("languageDefaultRelease") !== AURA_LANGUAGE_DEFAULT_RELEASE) {
+  localStorage.setItem("language", "english");
+  localStorage.setItem("languageDefaultRelease", AURA_LANGUAGE_DEFAULT_RELEASE);
+}
+
 function getAuraLanguage() {
   const language = localStorage.getItem("language") || "english";
   return auraTranslations[language] ? language : "english";
