@@ -28,7 +28,7 @@ async def handle_agent_chat(
     company_id: int,
     company_profile: str = "",
     voice_type: str = "female",
-    language: str = "filipino",
+    language: str = "english",
     session_id: str | None = None,
     user_id: str = "default",
 ) -> dict:

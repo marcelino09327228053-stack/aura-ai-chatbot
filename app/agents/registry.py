@@ -11,7 +11,7 @@ async def route_message(
     company_id: int,
     company_profile: str = "",
     voice_type: str = "female",
-    language: str = "filipino",
+    language: str = "english",
     session_id: str | None = None,
     agent_type: str | None = None,
     providers: list[str] | None = None,

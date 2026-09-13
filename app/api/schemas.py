@@ -7,7 +7,7 @@ class Message(BaseModel):
     text: str
     companyProfile: str = ""
     voiceType: str = "female"
-    language: str = "filipino"
+    language: str = "english"
     session_id: str | None = None
     agent_type: str | None = None
     providers: list[str] | None = None

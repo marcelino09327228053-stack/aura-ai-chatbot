@@ -2350,7 +2350,7 @@ body.workspace-dashboard #profileReviewExisting { height:390px !important; max-h
   </div>
   <div class="context-card">
     <small data-i18n="language">Language</small>
-    <strong id="contextLanguage">Filipino</strong>
+    <strong id="contextLanguage">English</strong>
     <span data-i18n="underMaintenance" style="display:inline-flex;width:max-content;margin-top:7px;padding:3px 8px;border:1px solid #f59e0b;border-radius:999px;background:rgba(245,158,11,.12);color:#fde68a;font-size:10px;font-weight:900;letter-spacing:.04em;text-transform:uppercase;">Under maintenance</span>
     <button data-settings-trigger type="button" disabled aria-disabled="true" data-i18n="languageVoice" title="Language & Voice is currently under maintenance." style="opacity:.58;cursor:not-allowed;">Language &amp; voice</button>
   </div>
@@ -2454,7 +2454,7 @@ z-index:1500;">
 
   <select id="topLanguageSelector" class="top-language-selector" data-language-selector onchange="setLanguage(this.value)" aria-label="Interface language">
     <option value="filipino">🇵🇭 Filipino</option>
-    <option value="english">🇺🇸 English</option>
+    <option value="english" selected>🇺🇸 English</option>
     <option value="japanese">🇯🇵 日本語</option>
     <option value="chinese">🇨🇳 中文</option>
     <option value="korean">🇰🇷 한국어</option>
@@ -4151,7 +4151,7 @@ Object.keys(auraTranslations).forEach(function(language) {
 });
 
 function getAuraLanguage() {
-  const language = localStorage.getItem("language") || "filipino";
+  const language = localStorage.getItem("language") || "english";
   return auraTranslations[language] ? language : "english";
 }
 
@@ -4900,7 +4900,7 @@ async function sendSystemGuideMessage() {
       text: text,
       companyProfile: "",
       voiceType: "none",
-      language: localStorage.getItem("language") || "filipino",
+      language: localStorage.getItem("language") || "english",
       session_id: localStorage.getItem("mb_system_guide_session_id") || null,
       providers: getSelectedProviders(),
       mode: "system_guide"
@@ -4946,7 +4946,7 @@ async function startSystemGuideMic() {
   }
   const recognition = new Recognition();
   const languages = { filipino:"fil-PH", english:"en-US", japanese:"ja-JP", chinese:"zh-CN", korean:"ko-KR", hindi:"hi-IN", spanish:"es-ES", french:"fr-FR", german:"de-DE", portuguese:"pt-BR", arabic:"ar-SA", russian:"ru-RU", indonesian:"id-ID", thai:"th-TH", vietnamese:"vi-VN" };
-  recognition.lang = languages[localStorage.getItem("language") || "filipino"] || "fil-PH";
+  recognition.lang = languages[localStorage.getItem("language") || "english"] || "en-US";
   recognition.interimResults = false;
   activeSpeechRecognition = recognition;
   recognition.onstart = function() {
@@ -6469,7 +6469,7 @@ window.onload = async function() {
   setAuraAvatar(localStorage.getItem("auraAvatar") || 1);
 
   const savedLanguage =
-    localStorage.getItem("language") || "filipino";
+    localStorage.getItem("language") || "english";
 
   document.querySelectorAll("[data-language-selector]").forEach(function(select) {
     select.value = savedLanguage;
@@ -6660,10 +6660,10 @@ async function startMic() {
     korean: "ko-KR",
     hindi: "hi-IN"
   };
-  const selectedLanguage = localStorage.getItem("language") || "filipino";
+  const selectedLanguage = localStorage.getItem("language") || "english";
   const micButton = document.getElementById("micBtn");
 
-  recognition.lang = speechLanguages[selectedLanguage] || "fil-PH";
+  recognition.lang = speechLanguages[selectedLanguage] || "en-US";
   recognition.interimResults = false;
   recognition.continuous = false;
   activeSpeechRecognition = recognition;
@@ -6918,7 +6918,7 @@ async function sendMessage() {
       text: text,
       companyProfile: localStorage.getItem("companyProfile") || "",
       voiceType: localStorage.getItem("voiceType") || "female",
-      language: localStorage.getItem("language") || "filipino",
+      language: localStorage.getItem("language") || "english",
       session_id: localStorage.getItem("aura_session_id") || null
     };
     payload.providers = getSelectedProviders();
@@ -7028,7 +7028,7 @@ async function sendCommand(command) {
       text: command,
       companyProfile: localStorage.getItem("companyProfile") || "",
       voiceType: localStorage.getItem("voiceType") || "female",
-      language: localStorage.getItem("language") || "filipino",
+      language: localStorage.getItem("language") || "english",
       session_id: localStorage.getItem("aura_session_id") || null
     };
     payload.providers = getSelectedProviders();
