@@ -21,14 +21,19 @@ class CompatCursor:
         adapted = adapt_sql(sql)
         self._cursor.execute(adapted, params)
         if is_postgres():
-            if adapted.strip().upper().startswith("INSERT") and "RETURNING" not in adapted.upper():
-                try:
-                    self._cursor.execute("SELECT LASTVAL()")
-                    row = self._cursor.fetchone()
-                    if row:
-                        self.lastrowid = next(iter(row.values())) if hasattr(row, "values") else row[0]
-                except Exception:
-                    self.lastrowid = None
+            self.lastrowid = None
+            # LASTVAL() raises when the INSERT supplied an explicit id and no
+            # sequence has been advanced in this session.  In PostgreSQL that
+            # error aborts the whole transaction even if Python catches it,
+            # which previously rolled back the legacy company seed and made
+            # the following subscription seed violate its foreign key.
+            # Parameterized application inserts use generated serial ids and
+            # retain sqlite-compatible lastrowid behavior.
+            if params and adapted.strip().upper().startswith("INSERT") and "RETURNING" not in adapted.upper():
+                self._cursor.execute("SELECT LASTVAL()")
+                row = self._cursor.fetchone()
+                if row:
+                    self.lastrowid = next(iter(row.values())) if hasattr(row, "values") else row[0]
         else:
             self.lastrowid = self._cursor.lastrowid
         return self
