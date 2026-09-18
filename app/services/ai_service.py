@@ -70,10 +70,10 @@ PROVIDERS = {
         "name": "Groq",
         "key_env": "GROQ_API_KEY",
         "model_env": "GROQ_MODEL",
-        "default_model": "llama-3.3-70b-versatile",
+        "default_model": "openai/gpt-oss-120b",
         "models": [
-            {"id": "llama-3.1-8b-instant", "label": "Fast", "price": "$"},
-            {"id": "llama-3.3-70b-versatile", "label": "Balanced", "price": "$$"},
+            {"id": "openai/gpt-oss-20b", "label": "Fast", "price": "$"},
+            {"id": "openai/gpt-oss-120b", "label": "Balanced", "price": "$$"},
         ],
     },
 }
@@ -138,7 +138,8 @@ def get_server_api_key(provider: str) -> str:
     try:
         from app.owner.repository import get_provider_key
         saved = get_provider_key(provider)
-        if saved: return saved
+        if saved:
+            return saved
     except Exception:
         pass
     return os.getenv(PROVIDERS[provider]["key_env"], "").strip()
@@ -149,9 +150,7 @@ def get_selected_model(company_id: int, provider: str) -> str:
     from app.database import settings_repository
 
     config = PROVIDERS[provider]
-    selected = settings_repository.get_settings(company_id).get(
-        "ai_models", {}
-    ).get(provider)
+    selected = settings_repository.get_settings(company_id).get("ai_models", {}).get(provider)
     allowed = {item["id"] for item in config["models"]}
     if selected in allowed:
         return selected
@@ -176,20 +175,13 @@ def save_selected_model(company_id: int, provider: str, model: str) -> str:
 
 
 def _post_json(url: str, payload: dict, headers: dict) -> dict:
-    request = Request(
-        url,
-        data=json.dumps(payload).encode("utf-8"),
-        headers={"Content-Type": "application/json", **headers},
-        method="POST",
-    )
+    request = Request(url, data=json.dumps(payload).encode("utf-8"), headers={"Content-Type": "application/json", **headers}, method="POST")
     try:
         with urlopen(request, timeout=90) as response:
             return json.loads(response.read().decode("utf-8"))
     except HTTPError as exc:
         detail = exc.read().decode("utf-8", errors="replace")
-        raise ProviderHTTPError(
-            exc.code, detail, _retry_after_seconds(exc.headers.get("Retry-After"))
-        ) from exc
+        raise ProviderHTTPError(exc.code, detail, _retry_after_seconds(exc.headers.get("Retry-After"))) from exc
     except URLError as exc:
         raise RuntimeError(f"Could not connect to AI provider: {exc.reason}") from exc
 
@@ -197,57 +189,31 @@ def _post_json(url: str, payload: dict, headers: dict) -> dict:
 def _gemini_reply(prompt: str, api_key: str, model: str) -> AIResult:
     client = genai.Client(api_key=api_key)
     try:
-        response = client.models.generate_content(
-            model=model,
-            contents=prompt,
-        )
+        response = client.models.generate_content(model=model, contents=prompt)
         usage = getattr(response, "usage_metadata", None)
-        return AIResult(
-            response.text or "No response generated.",
-            getattr(usage, "prompt_token_count", 0),
-            getattr(usage, "candidates_token_count", 0),
-        )
+        return AIResult(response.text or "No response generated.", getattr(usage, "prompt_token_count", 0), getattr(usage, "candidates_token_count", 0))
     finally:
         client.close()
 
 
 def _openai_reply(prompt: str, api_key: str, model: str) -> AIResult:
-    data = _post_json(
-        "https://api.openai.com/v1/responses",
-        {"model": model, "input": prompt},
-        {"Authorization": f"Bearer {api_key}"},
-    )
+    data = _post_json("https://api.openai.com/v1/responses", {"model": model, "input": prompt}, {"Authorization": f"Bearer {api_key}"})
     parts = []
     for item in data.get("output", []):
         for content in item.get("content", []):
             if content.get("type") == "output_text" and content.get("text"):
                 parts.append(content["text"])
     usage = data.get("usage", {})
-    return AIResult(
-        "\n".join(parts).strip() or "No response generated.",
-        usage.get("input_tokens", 0),
-        usage.get("output_tokens", 0),
-    )
+    return AIResult("\n".join(parts).strip() or "No response generated.", usage.get("input_tokens", 0), usage.get("output_tokens", 0))
 
 
 def _claude_reply(prompt: str, api_key: str, model: str) -> AIResult:
     data = _post_json(
         "https://api.anthropic.com/v1/messages",
-        {
-            "model": model,
-            "max_tokens": 2048,
-            "messages": [{"role": "user", "content": prompt}],
-        },
-        {
-            "x-api-key": api_key,
-            "anthropic-version": "2023-06-01",
-        },
+        {"model": model, "max_tokens": 2048, "messages": [{"role": "user", "content": prompt}]},
+        {"x-api-key": api_key, "anthropic-version": "2023-06-01"},
     )
-    text = "\n".join(
-        block.get("text", "")
-        for block in data.get("content", [])
-        if block.get("type") == "text"
-    ).strip() or "No response generated."
+    text = "\n".join(block.get("text", "") for block in data.get("content", []) if block.get("type") == "text").strip() or "No response generated."
     usage = data.get("usage", {})
     return AIResult(text, usage.get("input_tokens", 0), usage.get("output_tokens", 0))
 
@@ -255,43 +221,27 @@ def _claude_reply(prompt: str, api_key: str, model: str) -> AIResult:
 def _deepseek_reply(prompt: str, api_key: str, model: str) -> AIResult:
     data = _post_json(
         "https://api.deepseek.com/chat/completions",
-        {
-            "model": model,
-            "messages": [{"role": "user", "content": prompt}],
-            "stream": False,
-        },
+        {"model": model, "messages": [{"role": "user", "content": prompt}], "stream": False},
         {"Authorization": f"Bearer {api_key}"},
     )
     choices = data.get("choices", [])
     if not choices:
-        return "No response generated."
+        return AIResult("No response generated.")
     usage = data.get("usage", {})
-    return AIResult(
-        choices[0].get("message", {}).get("content", "").strip() or "No response generated.",
-        usage.get("prompt_tokens", 0),
-        usage.get("completion_tokens", 0),
-    )
+    return AIResult(choices[0].get("message", {}).get("content", "").strip() or "No response generated.", usage.get("prompt_tokens", 0), usage.get("completion_tokens", 0))
 
 
 def _grok_reply(prompt: str, api_key: str, model: str) -> AIResult:
     data = _post_json(
         "https://api.x.ai/v1/chat/completions",
-        {
-            "model": model,
-            "messages": [{"role": "user", "content": prompt}],
-            "stream": False,
-        },
+        {"model": model, "messages": [{"role": "user", "content": prompt}], "stream": False},
         {"Authorization": f"Bearer {api_key}"},
     )
     choices = data.get("choices", [])
     if not choices:
-        return "No response generated."
+        return AIResult("No response generated.")
     usage = data.get("usage", {})
-    return AIResult(
-        choices[0].get("message", {}).get("content", "").strip() or "No response generated.",
-        usage.get("prompt_tokens", 0),
-        usage.get("completion_tokens", 0),
-    )
+    return AIResult(choices[0].get("message", {}).get("content", "").strip() or "No response generated.", usage.get("prompt_tokens", 0), usage.get("completion_tokens", 0))
 
 
 def _groq_reply(prompt: str, api_key: str, model: str) -> AIResult:
@@ -304,29 +254,18 @@ def _groq_reply(prompt: str, api_key: str, model: str) -> AIResult:
     if not choices:
         return AIResult("No response generated.")
     usage = data.get("usage", {})
-    return AIResult(
-        choices[0].get("message", {}).get("content", "").strip() or "No response generated.",
-        usage.get("prompt_tokens", 0),
-        usage.get("completion_tokens", 0),
-    )
+    return AIResult(choices[0].get("message", {}).get("content", "").strip() or "No response generated.", usage.get("prompt_tokens", 0), usage.get("completion_tokens", 0))
 
 
-def generate_reply(
-    prompt: str,
-    provider: str = "gemini",
-    model: str | None = None,
-    api_key: str | None = None,
-) -> str:
+def generate_reply(prompt: str, provider: str = "gemini", model: str | None = None, api_key: str | None = None) -> str:
     """Call one configured AI provider and return its text response."""
     if provider not in PROVIDERS:
         raise ValueError(f"Unknown AI provider: {provider}")
-
     config = PROVIDERS[provider]
     api_key = (api_key or get_server_api_key(provider)).strip()
     if not api_key:
         raise RuntimeError(f"{config['name']} API key is not configured.")
     selected_model = model or os.getenv(config["model_env"], config["default_model"])
-
     callers = {
         "gemini": _gemini_reply,
         "openai": _openai_reply,
