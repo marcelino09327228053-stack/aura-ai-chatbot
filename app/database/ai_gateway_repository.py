@@ -131,6 +131,54 @@ def finalize_metered_success(
     return get_request(request_id)
 
 
+def finalize_demo_success(
+    request_id: str,
+    company_id: int,
+    provider: str,
+    model: str,
+    response_text: str,
+    input_tokens: int,
+    output_tokens: int,
+    provider_cost_usd: float,
+    attempt_count: int,
+) -> dict | None:
+    """Record demo usage exactly once without deducting subscription allowance."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("BEGIN IMMEDIATE")
+        cursor.execute(
+            """INSERT INTO ai_provider_usage
+               (company_id, provider, model, input_tokens, output_tokens,
+                estimated_cost, status, request_id, allowance_deducted_minor)
+               SELECT ?, ?, ?, ?, ?, ?, 'success', ?, 0
+               WHERE EXISTS (SELECT 1 FROM ai_gateway_requests
+                             WHERE request_id = ? AND company_id = ? AND status = 'pending')""",
+            (company_id, provider, model, input_tokens, output_tokens,
+             provider_cost_usd, request_id, request_id, company_id),
+        )
+        if cursor.rowcount != 1:
+            conn.rollback()
+            return None
+        cursor.execute(
+            """UPDATE ai_gateway_requests
+               SET provider=?, model=?, response_text=?, input_tokens=?, output_tokens=?,
+                   provider_cost_usd=?, allowance_deducted_minor=0, attempt_count=?,
+                   status='success', completed_at=datetime('now')
+               WHERE request_id=? AND company_id=? AND status='pending'""",
+            (provider, model, response_text, input_tokens, output_tokens,
+             provider_cost_usd, attempt_count, request_id, company_id),
+        )
+        if cursor.rowcount != 1:
+            conn.rollback()
+            return None
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    return get_request(request_id)
+
+
 def fail_request(
     request_id: str,
     error_code: str,
@@ -167,3 +215,13 @@ def list_recent(company_id: int, limit: int = 50) -> list[dict]:
         (company_id, limit),
     )
     return [dict(row) for row in cursor.fetchall()]
+
+
+def count_successful_requests_today(company_id: int) -> int:
+    row = get_connection().cursor().execute(
+        """SELECT COUNT(*) AS total FROM ai_gateway_requests
+           WHERE company_id = ? AND status = 'success'
+             AND date(created_at) = date('now')""",
+        (company_id,),
+    ).fetchone()
+    return int(row["total"] if row else 0)

@@ -15,6 +15,8 @@ from app.core.config import (
     AI_GATEWAY_RETRY_JITTER_SECONDS,
     AI_GATEWAY_RETRY_MAX_SECONDS,
     AI_GATEWAY_USD_TO_ALLOWANCE_RATE,
+    AI_GATEWAY_ENFORCE_SUBSCRIPTION,
+    AI_GATEWAY_DEMO_DAILY_REQUEST_LIMIT,
     AI_MODEL_COSTS_USD,
 )
 from app.database import ai_gateway_repository, ai_usage_repository
@@ -115,12 +117,23 @@ async def generate(prompt: str, company_id: int, user_id: int | None,
             return {**record, "reply": record["response_text"], "idempotent_replay": True}
         raise HTTPException(status_code=409, detail="AI request has already been submitted.")
 
-    try:
-        subscription = subscription_service.prepare_gateway_access(company_id)
-    except HTTPException:
-        ai_gateway_repository.fail_request(request_id, "subscription_denied", 0)
-        emit("subscription_denied", request_id=request_id, company_id=company_id)
-        raise
+    subscription = None
+    if AI_GATEWAY_ENFORCE_SUBSCRIPTION:
+        try:
+            subscription = subscription_service.prepare_gateway_access(company_id)
+        except HTTPException:
+            ai_gateway_repository.fail_request(request_id, "subscription_denied", 0)
+            emit("subscription_denied", request_id=request_id, company_id=company_id)
+            raise
+    else:
+        if ai_gateway_repository.count_successful_requests_today(company_id) >= AI_GATEWAY_DEMO_DAILY_REQUEST_LIMIT:
+            ai_gateway_repository.fail_request(request_id, "demo_limit_exhausted", 0)
+            emit("demo_limit_exhausted", request_id=request_id, company_id=company_id)
+            raise HTTPException(
+                status_code=429,
+                detail="The daily portfolio AI demo limit has been reached. Please try again tomorrow.",
+            )
+        emit("demo_access", request_id=request_id, company_id=company_id)
 
     traffic = get_traffic_manager()
     emit("queue_enter", request_id=request_id, company_id=company_id, **traffic.snapshot())
@@ -161,14 +174,20 @@ async def generate(prompt: str, company_id: int, user_id: int | None,
                         if cost is None:
                             raise RuntimeError("provider_cost_unconfigured")
                         charge_minor = _allowance_charge_minor(cost)
-                        if charge_minor > subscription["remaining_ai_credit_minor"]:
+                        if subscription is not None and charge_minor > subscription["remaining_ai_credit_minor"]:
                             ai_gateway_repository.fail_request(request_id, "allowance_exhausted", attempts, provider, model)
                             emit("allowance_exhausted", request_id=request_id, company_id=company_id)
                             raise HTTPException(status_code=402, detail="Monthly AI allowance is exhausted.")
-                        completed = ai_gateway_repository.finalize_metered_success(
-                            request_id, company_id, provider, model, reply, input_tokens,
-                            output_tokens, cost, charge_minor, attempts
-                        )
+                        if subscription is None:
+                            completed = ai_gateway_repository.finalize_demo_success(
+                                request_id, company_id, provider, model, reply, input_tokens,
+                                output_tokens, cost, attempts
+                            )
+                        else:
+                            completed = ai_gateway_repository.finalize_metered_success(
+                                request_id, company_id, provider, model, reply, input_tokens,
+                                output_tokens, cost, charge_minor, attempts
+                            )
                         if completed is None:
                             ai_gateway_repository.fail_request(request_id, "allowance_exhausted", attempts, provider, model)
                             emit("allowance_exhausted", request_id=request_id, company_id=company_id)

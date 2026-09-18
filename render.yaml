@@ -51,9 +51,14 @@ services:
       - key: GROQ_API_KEY
         sync: false
       - key: AI_GATEWAY_PROVIDER_ORDER
-        value: openai,gemini,claude,groq
+        value: gemini,openai,groq,claude
+      # Portfolio/demo only. Set to "true" before accepting paid customers.
+      - key: AI_GATEWAY_ENFORCE_SUBSCRIPTION
+        value: "false"
+      - key: AI_GATEWAY_DEMO_DAILY_REQUEST_LIMIT
+        value: "20"
       - key: FACEBOOK_AI_PROVIDERS
-        value: openai,gemini
+        value: gemini,openai,groq
       - key: GROQ_MODEL
         value: openai/gpt-oss-120b
       # Standard text-token prices verified for the deployment's default

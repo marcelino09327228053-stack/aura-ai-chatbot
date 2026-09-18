@@ -91,6 +91,12 @@ AI_MODEL_COSTS_USD = _json_env("AI_MODEL_COSTS_USD_JSON", {})
 AI_GATEWAY_USD_TO_ALLOWANCE_RATE = float(
     os.getenv("AI_GATEWAY_USD_TO_ALLOWANCE_RATE", "58.0")
 )
+AI_GATEWAY_ENFORCE_SUBSCRIPTION = os.getenv(
+    "AI_GATEWAY_ENFORCE_SUBSCRIPTION", "true"
+).lower() in ("1", "true", "yes")
+AI_GATEWAY_DEMO_DAILY_REQUEST_LIMIT = max(
+    1, int(os.getenv("AI_GATEWAY_DEMO_DAILY_REQUEST_LIMIT", "25"))
+)
 MOCK_PAYMENTS_ENABLED = os.getenv("MOCK_PAYMENTS_ENABLED", "true").lower() in (
     "1", "true", "yes"
 )
@@ -159,6 +165,8 @@ def validate_production_config() -> None:
         errors.append("production must not use the default database password")
     if os.getenv("MOCK_PAYMENTS_ENABLED", "true").lower() in ("1", "true", "yes"):
         errors.append("MOCK_PAYMENTS_ENABLED must be false in production")
+    if os.getenv("AI_GATEWAY_ENFORCE_SUBSCRIPTION", "true").lower() not in ("1", "true", "yes"):
+        errors.append("AI_GATEWAY_ENFORCE_SUBSCRIPTION must be true in production")
     provider = os.getenv("PAYMENT_WEBHOOK_PROVIDER", "").strip().lower()
     if not provider or provider in {"test", "mock", "your-payment-provider"}:
         errors.append("PAYMENT_WEBHOOK_PROVIDER must name the configured production provider")
