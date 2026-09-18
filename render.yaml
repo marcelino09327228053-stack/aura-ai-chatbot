@@ -38,6 +38,26 @@ services:
         value: "true"
       - key: PLUGINS_ENABLED
         value: "false"
+
+      # Managed AI Gateway. Provider secrets stay in Render; they are never
+      # committed to Git. At least one provider key must be configured.
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: AI_GATEWAY_PROVIDER_ORDER
+        value: gemini,openai,claude,groq
+      - key: GROQ_MODEL
+        value: openai/gpt-oss-120b
+      # Standard text-token prices verified for the deployment's default
+      # models on 2026-09-18. Override this catalog when provider prices change.
+      - key: AI_MODEL_COSTS_USD_JSON
+        value: '{"gemini-3.6-flash":{"input_per_million":0.75,"output_per_million":3.75},"gpt-5.4-mini":{"input_per_million":0.75,"output_per_million":4.5},"claude-sonnet-5":{"input_per_million":2.0,"output_per_million":10.0},"openai/gpt-oss-120b":{"input_per_million":0.15,"output_per_million":0.60}}'
+
       - key: FACEBOOK_APP_ID
         sync: false
       - key: FACEBOOK_APP_SECRET
