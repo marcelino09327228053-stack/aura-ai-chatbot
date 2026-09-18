@@ -57,6 +57,26 @@ def _error_status(exc: Exception) -> int | None:
     return None
 
 
+def _safe_error_reason(exc: Exception) -> str:
+    """Return a short diagnostic category without exposing provider secrets."""
+    text = str(exc).lower()
+    if "provider_usage_unavailable" in text:
+        return "usage_unavailable"
+    if "provider_cost_unconfigured" in text:
+        return "cost_unconfigured"
+    if "quota" in text or "insufficient_quota" in text or "resource_exhausted" in text:
+        return "quota_exhausted"
+    if "billing" in text or "credit" in text:
+        return "billing_or_credit"
+    if "model" in text and ("not found" in text or "does not exist" in text or "unsupported" in text):
+        return "model_unavailable"
+    if "api key" in text or "apikey" in text or "authentication" in text or "unauthorized" in text:
+        return "authentication_failed"
+    if "timeout" in text or "timed out" in text:
+        return "timeout"
+    return type(exc).__name__.lower()
+
+
 def _retry_after(exc: Exception) -> float | None:
     value = getattr(exc, "retry_after", None)
     if value is not None:
@@ -109,6 +129,9 @@ async def generate(prompt: str, company_id: int, user_id: int | None,
             emit("queue_exit", request_id=request_id, company_id=company_id,
                  queue_wait_ms=round((time.monotonic() - request_started) * 1000, 2), **traffic.snapshot())
             candidates = route_candidates(capability_tier)
+            emit("route_candidates", request_id=request_id, company_id=company_id,
+                 candidate_count=len(candidates), providers=[c.provider for c in candidates],
+                 models=[c.model for c in candidates])
             if not candidates:
                 ai_gateway_repository.fail_request(request_id, "providers_unavailable", 0)
                 emit("all_providers_unavailable", request_id=request_id, company_id=company_id)
@@ -160,10 +183,12 @@ async def generate(prompt: str, company_id: int, user_id: int | None,
                     except Exception as exc:
                         status = _error_status(exc)
                         is_rate_limit = status == 429
-                        last_error = "provider_rate_limited" if is_rate_limit else type(exc).__name__.lower()
+                        reason = _safe_error_reason(exc)
+                        last_error = "provider_rate_limited" if is_rate_limit else reason
                         emit("provider_429" if is_rate_limit else "provider_failure",
                              request_id=request_id, company_id=company_id, provider=provider,
-                             model=model, retry=retry_index, status_code=status)
+                             model=model, retry=retry_index, status_code=status,
+                             error_type=type(exc).__name__, reason=reason)
                         if is_rate_limit:
                             delay = _retry_after(exc)
                             delay = delay if delay is not None else _backoff(retry_index)
@@ -186,6 +211,7 @@ async def generate(prompt: str, company_id: int, user_id: int | None,
             ai_usage_repository.record_usage(company_id, last_provider, last_model,
                 status="failed", request_id=request_id)
             emit("request_failed", request_id=request_id, company_id=company_id,
+                 provider=last_provider, model=last_model, reason=last_error,
                  retries=max(0, attempts - 1), latency_ms=round((time.monotonic() - request_started) * 1000, 2))
             raise HTTPException(status_code=503, detail="AI service is temporarily unavailable. Please try again shortly.")
     except HTTPException as exc:
