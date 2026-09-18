@@ -38,19 +38,22 @@ services:
         value: "true"
       - key: PLUGINS_ENABLED
         value: "false"
-
       # Managed AI Gateway. Provider secrets stay in Render; they are never
       # committed to Git. At least one provider key must be configured.
       - key: GEMINI_API_KEY
         sync: false
       - key: OPENAI_API_KEY
         sync: false
+      - key: OPENAI_MODEL
+        value: gpt-5.4-mini
       - key: ANTHROPIC_API_KEY
         sync: false
       - key: GROQ_API_KEY
         sync: false
       - key: AI_GATEWAY_PROVIDER_ORDER
-        value: gemini,openai,claude,groq
+        value: openai,gemini,claude,groq
+      - key: FACEBOOK_AI_PROVIDERS
+        value: openai,gemini
       - key: GROQ_MODEL
         value: openai/gpt-oss-120b
       # Standard text-token prices verified for the deployment's default
