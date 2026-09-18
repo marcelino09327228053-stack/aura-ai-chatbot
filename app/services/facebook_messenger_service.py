@@ -14,6 +14,7 @@ from dotenv import load_dotenv
 
 from app.database import company_repository
 from app.database import facebook_connection_repository
+from app.services.ai_observability import emit
 from app.services.chat_service import handle_chat
 from app.services.spam_protection import check_message
 
@@ -210,49 +211,89 @@ async def send_text(recipient_id: str, text: str, page_token: str | None = None)
 async def process_webhook(payload: dict) -> None:
     """Process supported Page message events after the webhook is acknowledged."""
     if payload.get("object") != "page":
+        emit("facebook_webhook_skipped", reason="unsupported_object")
         return
     # External customer channels follow each customer's message language.
     # The website/dashboard language selector remains an independent manual override.
     language = "auto"
 
-    for entry in payload.get("entry", []):
+    entries = payload.get("entry", [])
+    emit("facebook_webhook_processing", entry_count=len(entries))
+    for entry in entries:
         page_id = str(entry.get("id", "page"))
         connection = facebook_connection_repository.get_for_page(page_id)
         company_id = int(connection["company_id"]) if connection else int(os.getenv("FACEBOOK_COMPANY_ID", "1"))
         page_token = connection.get("page_token") if connection else None
         company = company_repository.get_company(company_id)
         if not company:
-            continue
-        for event in entry.get("messaging", []):
-            message = event.get("message") or {}
-            sender_id = str((event.get("sender") or {}).get("id", ""))
-            message_id = str(message.get("mid", ""))
-            text = message.get("text")
-            if not sender_id or not message_id or not isinstance(text, str):
-                continue
-            if message.get("is_echo") or not _claim_message(message_id):
-                continue
-            spam = check_message(company_id, "facebook", sender_id, text)
-            if spam["blocked"]:
-                if spam["new_block"]:
-                    warning = (
-                        "Too many repeated messages were detected. Please wait 15 minutes "
-                        "before sending another message."
-                    )
-                    if page_token:
-                        await send_text(sender_id, warning, page_token)
-                    else:
-                        await send_text(sender_id, warning)
-                continue
-            result = await handle_chat(
-                text=text.strip(),
+            emit(
+                "facebook_webhook_entry_skipped",
                 company_id=company_id,
-                company_profile=company.get("company_profile", ""),
-                language=language,
-                session_id=f"facebook:{page_id}:{sender_id}",
-                providers=_configured_providers(),
+                connection_found=bool(connection),
+                reason="company_not_found",
             )
-            if page_token:
-                await send_text(sender_id, result.get("reply", ""), page_token)
-            else:
-                await send_text(sender_id, result.get("reply", ""))
+            continue
+        events = entry.get("messaging", [])
+        emit(
+            "facebook_webhook_entry",
+            company_id=company_id,
+            connection_found=bool(connection),
+            event_count=len(events),
+        )
+        for event in events:
+            try:
+                message = event.get("message") or {}
+                sender_id = str((event.get("sender") or {}).get("id", ""))
+                message_id = str(message.get("mid", ""))
+                text = message.get("text")
+                if not sender_id or not message_id or not isinstance(text, str):
+                    emit("facebook_message_skipped", company_id=company_id, reason="unsupported_message")
+                    continue
+                if message.get("is_echo"):
+                    emit("facebook_message_skipped", company_id=company_id, reason="echo")
+                    continue
+                if not _claim_message(message_id):
+                    emit("facebook_message_skipped", company_id=company_id, reason="duplicate")
+                    continue
+                spam = check_message(company_id, "facebook", sender_id, text)
+                if spam["blocked"]:
+                    emit(
+                        "facebook_message_skipped",
+                        company_id=company_id,
+                        reason="spam_blocked",
+                        new_block=bool(spam["new_block"]),
+                    )
+                    if spam["new_block"]:
+                        warning = (
+                            "Too many repeated messages were detected. Please wait 15 minutes "
+                            "before sending another message."
+                        )
+                        if page_token:
+                            await send_text(sender_id, warning, page_token)
+                        else:
+                            await send_text(sender_id, warning)
+                    continue
+                emit("facebook_message_received", company_id=company_id)
+                result = await handle_chat(
+                    text=text.strip(),
+                    company_id=company_id,
+                    company_profile=company.get("company_profile", ""),
+                    language=language,
+                    session_id=f"facebook:{page_id}:{sender_id}",
+                    providers=_configured_providers(),
+                )
+                reply = result.get("reply", "")
+                emit("facebook_ai_result", company_id=company_id, reply_length=len(reply))
+                if page_token:
+                    await send_text(sender_id, reply, page_token)
+                else:
+                    await send_text(sender_id, reply)
+                emit("facebook_reply_sent", company_id=company_id)
+            except Exception as exc:
+                emit(
+                    "facebook_processing_failed",
+                    company_id=company_id,
+                    error_type=type(exc).__name__,
+                    error=str(exc)[:240],
+                )
+                raise
