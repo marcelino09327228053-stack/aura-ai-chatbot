@@ -104,10 +104,20 @@ def _graph_request(
         raise RuntimeError(f"Could not reach Facebook: {exc.reason}") from exc
 
 
-def connect_page(page_token: str, app_secret: str) -> dict:
+def connect_page(
+    page_token: str,
+    app_secret: str,
+    known_page_id: str | None = None,
+    known_page_name: str | None = None,
+) -> dict:
     """Validate a Page token and subscribe the app to supported message events."""
-    page = _graph_request("me", page_token, app_secret=app_secret)
-    page_id = str(page.get("id", "")).strip()
+    if known_page_id:
+        page_id = str(known_page_id).strip()
+        page_name = str(known_page_name or "Facebook Page")
+    else:
+        page = _graph_request("me", page_token, app_secret=app_secret)
+        page_id = str(page.get("id", "")).strip()
+        page_name = str(page.get("name", "Facebook Page"))
     if not page_id:
         raise RuntimeError("Facebook did not return a valid Page ID.")
     _graph_request(
@@ -117,7 +127,7 @@ def connect_page(page_token: str, app_secret: str) -> dict:
         data={"subscribed_fields": "messages,messaging_postbacks"},
         app_secret=app_secret,
     )
-    return {"page_id": page_id, "page_name": str(page.get("name", "Facebook Page"))}
+    return {"page_id": page_id, "page_name": page_name}
 
 
 def exchange_oauth_code(code: str, redirect_uri: str, app_id: str, app_secret: str) -> str:

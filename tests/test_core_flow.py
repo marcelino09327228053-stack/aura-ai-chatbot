@@ -553,7 +553,7 @@ class CoreFlowTests(unittest.TestCase):
         query = parse_qs(urlparse(authorization_url).query)
         self.assertEqual(query["client_id"], ["test-meta-app-id"])
         self.assertIn("pages_show_list", query["scope"][0])
-        self.assertIn("pages_read_engagement", query["scope"][0])
+        self.assertNotIn("pages_read_engagement", query["scope"][0])
 
         with patch(
             "app.services.facebook_messenger_service.exchange_oauth_code",
