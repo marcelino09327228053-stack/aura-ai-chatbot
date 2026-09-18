@@ -6,6 +6,10 @@ import logging
 import threading
 
 logger = logging.getLogger("aura.ai_gateway")
+logger.setLevel(logging.INFO)
+# Uvicorn's error logger is wired to the hosting console on Render. Mirror the
+# already-sanitized gateway event there so provider/fallback failures are visible.
+console_logger = logging.getLogger("uvicorn.error")
 _metrics = Counter()
 _gauges = {}
 _lock = threading.Lock()
@@ -27,7 +31,9 @@ def emit(event: str, **fields) -> None:
             _metrics["queue_wait_ms_sum"] += float(safe["queue_wait_ms"])
         if "queue_size" in safe:
             _gauges["queue_size"] = float(safe["queue_size"])
-    logger.info("ai_gateway_event %s", json.dumps({"event": event, **safe}, default=str, sort_keys=True))
+    message = "ai_gateway_event " + json.dumps({"event": event, **safe}, default=str, sort_keys=True)
+    logger.info(message)
+    console_logger.info(message)
 
 
 def metrics_snapshot() -> dict:
