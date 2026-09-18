@@ -95,7 +95,7 @@ async def start_facebook_oauth(request: Request, ctx=Depends(require_auth)):
         "redirect_uri": redirect_uri,
         "state": state,
         "response_type": "code",
-        "scope": "pages_show_list,pages_messaging,pages_manage_metadata",
+        "scope": "pages_show_list,pages_read_engagement,pages_messaging,pages_manage_metadata",
     })
     return {"authorization_url": f"https://www.facebook.com/dialog/oauth?{query}"}
 
@@ -163,9 +163,12 @@ async def complete_facebook_oauth(page_id: str, session: str, ctx=Depends(requir
     if not page:
         raise HTTPException(status_code=404, detail="Facebook Page was not found.")
     _, app_secret = _oauth_config()
-    verified = await asyncio.to_thread(
-        facebook_messenger_service.connect_page, page["page_token"], app_secret
-    )
+    try:
+        verified = await asyncio.to_thread(
+            facebook_messenger_service.connect_page, page["page_token"], app_secret
+        )
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc)[:260]) from exc
     saved = facebook_connection_repository.save(
         ctx.company_id, verified["page_id"], verified["page_name"], page["page_token"], app_secret
     )

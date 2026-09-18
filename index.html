@@ -3290,7 +3290,13 @@ async function finishFacebookOAuth(session) {
       "/webhooks/facebook/oauth/complete/" + encodeURIComponent(pageId) + "?session=" + encodeURIComponent(session),
       {method:"POST", headers:authHeaders()}
     );
-    const result = await connected.json();
+    const responseText = await connected.text();
+    let result = {};
+    try {
+      result = responseText ? JSON.parse(responseText) : {};
+    } catch (_) {
+      throw new Error("Facebook connection could not be completed. Please try again.");
+    }
     if (!connected.ok) throw new Error(result.detail || "Could not connect the Facebook Page.");
     facebookConnection = result;
     await loadFacebookConnection();

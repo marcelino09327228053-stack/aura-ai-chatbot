@@ -553,6 +553,7 @@ class CoreFlowTests(unittest.TestCase):
         query = parse_qs(urlparse(authorization_url).query)
         self.assertEqual(query["client_id"], ["test-meta-app-id"])
         self.assertIn("pages_show_list", query["scope"][0])
+        self.assertIn("pages_read_engagement", query["scope"][0])
 
         with patch(
             "app.services.facebook_messenger_service.exchange_oauth_code",
@@ -582,6 +583,18 @@ class CoreFlowTests(unittest.TestCase):
         self.assertEqual(pages.status_code, 200, pages.text)
         self.assertEqual(pages.json()["pages"][0]["page_name"], "OAuth Test Page")
         self.assertNotIn("page_token", pages.json()["pages"][0])
+
+        with patch(
+            "app.services.facebook_messenger_service.connect_page",
+            side_effect=RuntimeError("Facebook rejected the Page permission."),
+        ):
+            failed = self.client.post(
+                "/webhooks/facebook/oauth/complete/oauth-page-1",
+                headers=self.headers,
+                params={"session": session},
+            )
+        self.assertEqual(failed.status_code, 400, failed.text)
+        self.assertIn("Facebook rejected", failed.json()["detail"])
 
         with patch(
             "app.services.facebook_messenger_service.connect_page",
