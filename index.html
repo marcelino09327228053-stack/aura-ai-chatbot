@@ -5131,6 +5131,12 @@ function escapeProfilePreview(value) {
     .replace(/'/g, "&#39;");
 }
 
+// Shared HTML escaping for workspace names, notices, and conversation titles.
+// Function declarations are hoisted, so callers earlier in this script can use it.
+function escapeHtml(value) {
+  return escapeProfilePreview(value);
+}
+
 function renderHighlightedProfile(value) {
   const source = String(value || "");
   const hiddenText = document.getElementById("profileReviewNew");

@@ -551,6 +551,37 @@ class CoreFlowTests(unittest.TestCase):
         self.assertEqual(removed.status_code, 200)
         self.assertTrue(removed.json()["disconnected"])
 
+    def test_facebook_page_reconnect_transfers_profile_workspace(self):
+        from app.database import company_repository, facebook_connection_repository
+
+        auth = self.client.get("/auth/me", headers=self.headers).json()
+        first_company_id = auth["company"]["id"]
+        second_company = company_repository.create_company(
+            auth["user"]["id"], "Facebook Transfer Workspace"
+        )
+
+        facebook_connection_repository.save(
+            first_company_id,
+            "transfer-page-123",
+            "Transfer Test Page",
+            "first-page-token-that-is-long-enough",
+            "first-app-secret",
+        )
+        moved = facebook_connection_repository.save(
+            second_company["id"],
+            "transfer-page-123",
+            "Transfer Test Page",
+            "second-page-token-that-is-long-enough",
+            "second-app-secret",
+        )
+
+        self.assertIsNone(facebook_connection_repository.get_for_company(first_company_id))
+        self.assertEqual(moved["company_id"], second_company["id"])
+        self.assertEqual(
+            facebook_connection_repository.get_for_page("transfer-page-123")["company_id"],
+            second_company["id"],
+        )
+
     def test_one_click_facebook_oauth_page_selection(self):
         os.environ["FACEBOOK_APP_ID"] = "test-meta-app-id"
         os.environ["FACEBOOK_APP_SECRET"] = "test-meta-app-secret"

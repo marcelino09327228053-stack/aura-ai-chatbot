@@ -11,7 +11,14 @@ from app.database.connection import get_connection
 def save(company_id: int, page_id: str, page_name: str, page_token: str, app_secret: str) -> dict:
     verify_token = secrets.token_urlsafe(24)
     conn = get_connection()
-    conn.cursor().execute(
+    cursor = conn.cursor()
+    # A Page can answer for only one company profile at a time. Reauthorizing
+    # it from another workspace transfers it to that selected workspace.
+    cursor.execute(
+        "DELETE FROM facebook_connections WHERE page_id = ? AND company_id <> ?",
+        (page_id, company_id),
+    )
+    cursor.execute(
         """
         INSERT INTO facebook_connections
         (company_id, page_id, page_name, encrypted_page_token, encrypted_app_secret, verify_token)
