@@ -478,7 +478,9 @@ class CoreFlowTests(unittest.TestCase):
             return_value={"reply": "We are open from 8 AM to 5 PM."},
         ) as chat_handler, patch(
             "app.services.facebook_messenger_service.send_text"
-        ) as sender:
+        ) as sender, patch(
+            "app.services.facebook_messenger_service.send_sender_action"
+        ) as sender_action:
             asyncio.run(facebook_messenger_service.process_webhook(payload))
         chat_handler.assert_called_once()
         self.assertEqual(
@@ -487,6 +489,13 @@ class CoreFlowTests(unittest.TestCase):
         )
         sender.assert_called_once_with(
             "customer-route-test", "We are open from 8 AM to 5 PM."
+        )
+        self.assertEqual(
+            [call.args for call in sender_action.await_args_list],
+            [
+                ("customer-route-test", "typing_on", None),
+                ("customer-route-test", "typing_off", None),
+            ],
         )
 
     def test_simple_facebook_connect_is_encrypted_and_company_scoped(self):

@@ -203,9 +203,73 @@ def _send_text_sync(recipient_id: str, text: str, page_token: str | None = None)
         raise RuntimeError(f"Could not reach Facebook Send API: {exc.reason}") from exc
 
 
+def _send_sender_action_sync(
+    recipient_id: str,
+    action: str,
+    page_token: str | None = None,
+) -> None:
+    """Send a Messenger sender action such as ``typing_on`` or ``typing_off``."""
+    if action not in {"typing_on", "typing_off"}:
+        raise ValueError(f"Unsupported Facebook sender action: {action}")
+    page_token = (page_token or os.getenv("FACEBOOK_PAGE_ACCESS_TOKEN", "")).strip()
+    if not page_token:
+        raise RuntimeError("FACEBOOK_PAGE_ACCESS_TOKEN is not configured.")
+    graph_version = os.getenv("FACEBOOK_GRAPH_API_VERSION", "v23.0").strip()
+    query = urlencode({"access_token": page_token})
+    url = f"https://graph.facebook.com/{graph_version}/me/messages?{query}"
+    payload = json.dumps({
+        "recipient": {"id": recipient_id},
+        "sender_action": action,
+    }).encode("utf-8")
+    request = Request(
+        url,
+        data=payload,
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    try:
+        with urlopen(request, timeout=20) as response:
+            response.read()
+    except HTTPError as exc:
+        detail = exc.read().decode("utf-8", errors="replace")
+        raise RuntimeError(
+            f"Facebook sender action failed ({exc.code}): {detail[:240]}"
+        ) from exc
+    except URLError as exc:
+        raise RuntimeError(f"Could not reach Facebook Send API: {exc.reason}") from exc
+
+
 async def send_text(recipient_id: str, text: str, page_token: str | None = None) -> None:
     for chunk in _message_chunks(text):
         await asyncio.to_thread(_send_text_sync, recipient_id, chunk, page_token)
+
+
+async def send_sender_action(
+    recipient_id: str,
+    action: str,
+    page_token: str | None = None,
+) -> None:
+    await asyncio.to_thread(_send_sender_action_sync, recipient_id, action, page_token)
+
+
+async def _try_sender_action(
+    recipient_id: str,
+    action: str,
+    page_token: str | None,
+    company_id: int,
+) -> None:
+    """Keep typing-indicator failures from blocking the actual AI reply."""
+    try:
+        await send_sender_action(recipient_id, action, page_token)
+        emit("facebook_sender_action_sent", company_id=company_id, action=action)
+    except Exception as exc:
+        emit(
+            "facebook_sender_action_failed",
+            company_id=company_id,
+            action=action,
+            error_type=type(exc).__name__,
+            error=str(exc)[:240],
+        )
 
 
 async def process_webhook(payload: dict) -> None:
@@ -274,14 +338,18 @@ async def process_webhook(payload: dict) -> None:
                             await send_text(sender_id, warning)
                     continue
                 emit("facebook_message_received", company_id=company_id)
-                result = await handle_chat(
-                    text=text.strip(),
-                    company_id=company_id,
-                    company_profile=company.get("company_profile", ""),
-                    language=language,
-                    session_id=f"facebook:{page_id}:{sender_id}",
-                    providers=_configured_providers(),
-                )
+                await _try_sender_action(sender_id, "typing_on", page_token, company_id)
+                try:
+                    result = await handle_chat(
+                        text=text.strip(),
+                        company_id=company_id,
+                        company_profile=company.get("company_profile", ""),
+                        language=language,
+                        session_id=f"facebook:{page_id}:{sender_id}",
+                        providers=_configured_providers(),
+                    )
+                finally:
+                    await _try_sender_action(sender_id, "typing_off", page_token, company_id)
                 reply = result.get("reply", "")
                 emit("facebook_ai_result", company_id=company_id, reply_length=len(reply))
                 if page_token:
